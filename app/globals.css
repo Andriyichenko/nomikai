@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-noto-sans-jp);
+  --font-yuji-syuku: var(--font-yuji-syuku);
+  
+  /* Dynamic Font */
+  --font-dynamic: var(--font-current, var(--font-noto-sans-jp));
+}
+
+:root {
+  --primary-color: #1e3820;
+  --accent-color: #ff0072;
+}
+
+.text-shadow-md {
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}

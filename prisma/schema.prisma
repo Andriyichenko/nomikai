@@ -1,0 +1,134 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("user")
+  isSubscribed  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  reservations  Reservation[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, code])
+}
+
+model Reservation {
+  id             String   @id @default(cuid())
+  userId         String?
+  name           String
+  email          String
+  availableDates String   
+  message        String?
+  createdAt      DateTime @default(now())
+  
+  user           User?    @relation(fields: [userId], references: [id])
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  date        String   
+  location    String
+  description String
+  images      String   
+  status      String   @default("published")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ReservationItem {
+  id          String   @id @default(cuid())
+  title       String   
+  date        String   // Keep as fallback/display date
+  startDate   String   @default("") // YYYY-MM-DD
+  endDate     String   @default("") // YYYY-MM-DD
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteConfig {
+  id          String   @id @default("default") 
+  primaryColor String  @default("#1e3820")
+  accentColor  String  @default("#ff0072")
+  fontFamily   String  @default("sans")
+  layout       String  @default("sidebar")
+  mainTitle    String  @default("バース人材") 
+  subTitle     String  @default("飲み会")
+  
+  // Japanese Hero Section Content
+  heroTitle    String  @default("25年3月29日に飲み会")
+  heroSubtitle String  @default("決定")
+  heroText     String  @default("一緒に素敵な思い出作りませんか？\n25年3月29日にお待ちしております") 
+  
+  // Chinese Hero Section Content (New)
+  heroTitleCn    String  @default("25年3月干饭大事预约")
+  heroSubtitleCn String  @default("开搞")
+  heroTextCn     String  @default("青春不散场,有你就够了\n25年3月29日不见不散")
+  
+  updatedAt    DateTime @updatedAt
+}
