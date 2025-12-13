@@ -44,26 +44,41 @@ export async function PUT(request: Request) {
 
     try {
         const body = await request.json();
-        // Allow partial updates
+        console.log("Saving config:", body);
+
+        // Allow partial updates but ensure we don't send undefined for required fields
         const { 
             primaryColor, accentColor, fontFamily, layout, mainTitle, subTitle, 
             heroTitle, heroSubtitle, heroText, heroTitleCn, heroSubtitleCn, heroTextCn 
         } = body;
 
+        const dataToSave = {
+            primaryColor: primaryColor || "#1e3820",
+            accentColor: accentColor || "#ff0072",
+            fontFamily: fontFamily || "sans",
+            layout: layout || "sidebar",
+            mainTitle: mainTitle || "バース人材",
+            subTitle: subTitle || "飲み会",
+            heroTitle: heroTitle || "",
+            heroSubtitle: heroSubtitle || "",
+            heroText: heroText || "",
+            heroTitleCn: heroTitleCn || "",
+            heroSubtitleCn: heroSubtitleCn || "",
+            heroTextCn: heroTextCn || ""
+        };
+
         const config = await prisma.siteConfig.upsert({
             where: { id: "default" },
-            update: { 
-                primaryColor, accentColor, fontFamily, layout, mainTitle, subTitle, 
-                heroTitle, heroSubtitle, heroText, heroTitleCn, heroSubtitleCn, heroTextCn 
-            },
+            update: dataToSave,
             create: { 
-                id: "default", primaryColor, accentColor, fontFamily, layout, mainTitle, subTitle, 
-                heroTitle, heroSubtitle, heroText, heroTitleCn, heroSubtitleCn, heroTextCn 
+                id: "default", 
+                ...dataToSave
             }
         });
 
         return NextResponse.json(config);
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        console.error("Config save error:", e);
+        return NextResponse.json({ error: e.message || "Failed to save config" }, { status: 500 });
     }
 }
