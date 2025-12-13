@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { parseISO, startOfDay, isBefore } from "date-fns";
+import { parseISO, format, isAfter, isBefore, startOfDay } from 'date-fns';
 import toast from "react-hot-toast";
 import { emailTemplates } from "@/lib/email-templates/templates";
 
