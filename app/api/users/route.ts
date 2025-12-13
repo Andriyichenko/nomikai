@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 async function checkAdmin() {
     const session = await getServerSession(authOptions);
@@ -24,6 +22,7 @@ export async function GET() {
             select: {
                 id: true,
                 name: true,
+                username: true,
                 email: true,
                 role: true,
                 isSubscribed: true,
@@ -34,8 +33,8 @@ export async function GET() {
         // Map to frontend interface
         const formattedUsers = users.map(u => ({
             id: u.id,
-            username: u.name || u.email?.split('@')[0] || "No Name", // Use name, fallback to email prefix
-            email: u.email,
+            username: u.username || u.name || "No Name", 
+            email: u.email || "",
             role: u.role,
             isSubscribed: u.isSubscribed,
             createdAt: u.createdAt
@@ -52,13 +51,13 @@ export async function POST(request: Request) {
     
     try {
         const { username, password, role } = await request.json();
-        const email = username.includes('@') ? username : `${username}@example.com`;
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const newUser = await prisma.user.create({
             data: {
-                email,
-                name: username, // Save username as name
+                username,
+                name: username,
+                email: username.includes('@') ? username : undefined,
                 password: hashedPassword,
                 role: role || 'user'
             }

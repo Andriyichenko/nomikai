@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import nodemailer from "nodemailer";
 import { randomInt } from 'crypto';
-
-const prisma = new PrismaClient();
 
 // Configure Email Transporter
 const transporter = nodemailer.createTransport({
