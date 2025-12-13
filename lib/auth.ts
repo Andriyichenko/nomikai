@@ -103,6 +103,7 @@ export const authOptions: NextAuthOptions = {
   session: {
       strategy: "jwt"
   },
+  debug: process.env.NODE_ENV !== "production" || process.env.NEXTAUTH_DEBUG === "true",
   pages: {
     signIn: '/login',
   },
