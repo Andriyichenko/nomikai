@@ -40,6 +40,14 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+    return handleSave(request);
+}
+
+export async function POST(request: Request) {
+    return handleSave(request);
+}
+
+async function handleSave(request: Request) {
     if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {

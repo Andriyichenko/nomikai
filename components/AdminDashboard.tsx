@@ -211,7 +211,7 @@ export default function AdminDashboard() {
   const openEmailToUser = (email: string) => { setSpecificEmail(email); setEmailTarget('specific'); setActiveTab('email'); };
   const handleSaveConfig = async () => { setSavingConfig(true); 
     try { 
-        const res = await fetch('/api/config', { method: 'PUT', body: JSON.stringify(config) }); 
+        const res = await fetch('/api/config', { method: 'POST', body: JSON.stringify(config) }); 
         if (!res.ok) throw new Error("Failed to save config");
         toast.success("設定を保存しました。リロードすると反映されます。"); 
         window.location.reload(); 

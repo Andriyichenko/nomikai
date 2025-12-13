@@ -171,21 +171,22 @@ export default function SplashScreen({
       .to(
         textRightLeftRef.current,
         {
-          clipPath: "polygon(0 0, 100% 0, 45% 100%, 0 100%)",  // ✅ 左半部分
-          x: -10,
-          y: 12,  // ✅ 向左下
-          duration: 0.35,
+          clipPath: "polygon(0 0, 100% 0, 0 100%)",  // ✅ Upper Left Half
+          x: -15,
+          y: -15,  // Move Up-Left
+          duration: 0.4,
+          ease: "power2.out",
         },
         "<"
       )
       .to(
         textRightRightRef.current,
         {
-          clipPath: "polygon(45% 0, 100% 0, 100% 100%, 60% 100%)",  // ✅ 右半部分
-          x: 10,
-          y: -10,  // ✅ 向右上
-          duration: 0.25,
-          ease: "power3.out",
+          clipPath: "polygon(100% 0, 100% 100%, 0 100%)",  // ✅ Lower Right Half
+          x: 15,
+          y: 15,  // Move Down-Right
+          duration: 0.4,
+          ease: "power2.out",
         },
         "<"
       )
@@ -201,7 +202,7 @@ export default function SplashScreen({
         logoRef.current,
         {
           opacity: 0,
-          y: 40,
+          y: 30,
           scale: 0.9,
           filter: "blur(6px)",
         },
@@ -220,7 +221,7 @@ export default function SplashScreen({
   }, [onAnimationComplete]);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-[9999] bg-black overflow-hidden">
+    <div ref={containerRef} className="fixed inset-0 z-[9999] bg-black overflow-hidden flex flex-col items-center justify-center">
       <div
         ref={slashLeftRef}
         className="pointer-events-none absolute inset-[-40%] opacity-0"
@@ -240,50 +241,54 @@ export default function SplashScreen({
       <canvas ref={dustCanvasRef} className="absolute inset-0 pointer-events-none opacity-100" />
       <canvas ref={sakuraCanvasRef} className="absolute inset-0 pointer-events-none" />
 
-      {/* 左侧文字 */}
-      <div className="absolute left-[38%] top-[35%]">
-        <div
-          ref={textLeftTopRef}
-          className="writing-mode-vertical-rl font-yuji-syuku text-5xl tracking-[0.35em] absolute text-white opacity-0"
-        >
-          バース人材
-        </div>
-        <div
-          ref={textLeftBottomRef}
-          className="writing-mode-vertical-rl font-yuji-syuku text-5xl tracking-[0.35em] absolute text-white opacity-0"
-        >
-          バース人材
-        </div>
-      </div>
-
-      {/* 右侧文字（/ 切开） */}
-      <div className="absolute left-[56%] top-[38%]">
-        <div
-          ref={textRightLeftRef}
-          className="writing-mode-vertical-rl font-yuji-syuku text-7xl tracking-[0.25em] absolute text-red-500 opacity-0"
-          style={{ textShadow: "0 0 24px rgba(239, 68, 68, 0.6)" }}
-        >
-          頑張れ
-        </div>
-        <div
-          ref={textRightRightRef}
-          className="writing-mode-vertical-rl font-yuji-syuku text-7xl tracking-[0.25em] absolute text-red-500 opacity-0"
-          style={{ textShadow: "0 0 24px rgba(239, 68, 68, 0.6)" }}
-        >
-          頑張れ
-        </div>
-      </div>
-
-      {/* Logo（武士刀入鞘） */}
-      <div ref={logoRef} className="absolute left-1/2 top-[18%] -translate-x-1/2 opacity-0">
+      {/* Logo Area (Top) */}
+      <div ref={logoRef} className="absolute top-[15%] opacity-0 z-10">
         <div
           className="relative"
           style={{
             filter: "drop-shadow(0 0 20px rgba(255,255,255,0.3))",
           }}
         >
-          <Image src="/my_logo.png" alt="Logo" width={200} height={120} />
+          {/* Ensure correct logo is used. Using standard path. */}
+          <Image src="/my_logo.png" alt="Logo" width={180} height={180} className="object-contain" />
         </div>
+      </div>
+
+      {/* Text Area (Centered/Lower) */}
+      <div className="relative w-full h-full max-w-4xl mx-auto pointer-events-none">
+          {/* 左侧文字 */}
+          <div className="absolute left-[25%] md:left-[30%] top-[45%]">
+            <div
+              ref={textLeftTopRef}
+              className="writing-mode-vertical-rl font-yuji-syuku text-5xl md:text-6xl tracking-[0.35em] absolute text-white opacity-0"
+            >
+              バース人材
+            </div>
+            <div
+              ref={textLeftBottomRef}
+              className="writing-mode-vertical-rl font-yuji-syuku text-5xl md:text-6xl tracking-[0.35em] absolute text-white opacity-0"
+            >
+              バース人材
+            </div>
+          </div>
+
+          {/* 右侧文字（/ 切开） */}
+          <div className="absolute right-[25%] md:right-[30%] top-[45%]">
+            <div
+              ref={textRightLeftRef}
+              className="writing-mode-vertical-rl font-yuji-syuku text-6xl md:text-8xl tracking-[0.25em] absolute text-red-500 opacity-0"
+              style={{ textShadow: "0 0 24px rgba(239, 68, 68, 0.6)" }}
+            >
+              頑張れ
+            </div>
+            <div
+              ref={textRightRightRef}
+              className="writing-mode-vertical-rl font-yuji-syuku text-6xl md:text-8xl tracking-[0.25em] absolute text-red-500 opacity-0"
+              style={{ textShadow: "0 0 24px rgba(239, 68, 68, 0.6)" }}
+            >
+              頑張れ
+            </div>
+          </div>
       </div>
     </div>
   );
