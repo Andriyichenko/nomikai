@@ -4,22 +4,24 @@ import { ArrowLeft, Calendar, MapPin, Quote } from "lucide-react";
 import { ImageGallery } from "@/components/ImageGallery";
 
 // Event Data
-const events: Record<string, any> = {
-  "2025-01": {
-    title: "2025年 新年会 (New Year Party)",
-    date: "2025年1月18日",
-    location: "梅田",
-    description: "新年あけましておめでとうございます！\n新しい仲間も増え、最高のスタートを切ることができました。今年もよろしくお願いします！",
-    images: ["/25_1.jpg"]
-  },
-  "2025-03": {
-    title: "2025年 春の飲み会 (Spring Gathering)",
-    date: "2025年3月29日",
-    location: "難波",
-    description: "春の訪れと共に、みんなで乾杯！\n今回は過去最多の参加者数で、二次会まで大盛り上がりでした。サプライズゲストも登場！？",
-    images: ["/25_3_1.jpg", "/25_3_2.jpg", "/25_3_3.jpg", "/25_3_4.jpg"]
-  }
-};
+  const events = [
+    {
+      id: "2025-01",
+      title: "2025年 新年会",
+      date: "2025-01-18",
+      location: "新宿 某居酒屋",
+      description: "2025年の幕開けを祝う新年会を開催しました。久しぶりの再会で話が尽きず、あっという間の3時間でした.",
+      images: ["/25_1.jpg"]
+    },
+    {
+      id: "2025-03",
+      title: "2025年 3月飲み会",
+      date: "2025-03-29",
+      location: "渋谷",
+      description: "春の飲み会！桜の季節に合わせて開催.",
+      images: ["/25_3_1.JPG", "/25_3_2.JPG", "/25_3_3.JPG", "/25_3_4.JPG"]
+    }
+  ];
 
 export function generateStaticParams() {
   return Object.keys(events).map((eventId) => ({ eventId }));
