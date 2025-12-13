@@ -42,11 +42,10 @@ export default function Navigation({ lang: propLang }: NavigationProps) {
     ],
   };
 
-  const archiveItems = [
-      { href: "/archive/2025-01", label: "2025年1月 新年会" },
-      { href: "/archive/2025-03", label: "2025年3月 春飲み" },
-  ];
-
+    const archiveItems = [
+      { href: "/archive/0", label: "2025年1月 新年会" },
+      { href: "/archive/1", label: "2025年3月 春飲み" },
+    ];
   const currentItems = lang === 'cn' ? menuItems.cn : menuItems.ja;
 
   return (

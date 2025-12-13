@@ -26,14 +26,14 @@ export async function GET(request: Request) {
       const lowerQ = q.toLowerCase();
 
       // 1. Search Static Events (Archive)
-      events.forEach(e => {
+      events.forEach((e, index) => {
           if (e.title.toLowerCase().includes(lowerQ) || e.content.toLowerCase().includes(lowerQ)) {
               results.push({ 
                   type: 'event', 
                   id: e.id, 
                   title: e.title, 
                   sub: 'Event Archive', 
-                  href: `/archive/${e.id}` 
+                  href: `/archive/${index}` 
               });
           }
       });
