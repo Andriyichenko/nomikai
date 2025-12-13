@@ -1,11 +1,7 @@
-"use client";
-
+import type { Metadata } from "next";
 import { Noto_Sans_JP, Yuji_Syuku } from "next/font/google";
 import "./globals.css";
-import Providers from "./providers";
-import ThemeProvider from "@/components/ThemeProvider";
-import SplashScreen from "@/components/SplashScreen";
-import { useEffect, useState } from "react";
+import ClientLayout from "@/components/ClientLayout";
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
@@ -19,31 +15,23 @@ const yujiSyuku = Yuji_Syuku({
   variable: "--font-yuji-syuku",
 });
 
+export const metadata: Metadata = {
+  title: "バース人材 飲み会予約",
+  description: "25年3月29日に飲み会",
+  icons: {
+    icon: "/homelogo1.png",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [showSplash, setShowSplash] = useState(true);
-
-  // Splash will always show on initial load due to `showSplash` default true
-  // It will then be hidden when onAnimationComplete is called
-  const handleSplashComplete = () => {
-    setShowSplash(false); // Hide splash and show content
-  };
-
   return (
     <html lang="ja">
       <body className={`${notoSansJP.variable} ${yujiSyuku.variable} font-sans antialiased`}>
-        <Providers>
-            <ThemeProvider>
-                {showSplash && <SplashScreen onAnimationComplete={handleSplashComplete} />}
-                {/* Ensure children are only visible after splash is hidden */}
-                <div style={{ visibility: showSplash ? 'hidden' : 'visible' }}>
-                  {children}
-                </div>
-            </ThemeProvider>
-        </Providers>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

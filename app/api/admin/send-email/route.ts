@@ -45,7 +45,10 @@ export async function POST(request: Request) {
 
     // Send emails (using BCC for privacy)
     await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+        from: {
+            name: "バース人材の飲み会予約システム",
+            address: process.env.EMAIL_FROM as string
+        },
         bcc: recipients,
         subject: subject,
         text: content,
