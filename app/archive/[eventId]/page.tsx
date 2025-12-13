@@ -29,7 +29,7 @@ export function generateStaticParams() {
 
 export default async function ArchiveEventPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
-  const event = events[eventId];
+  const event = events[Number(eventId)];
 
   if (!event) return notFound();
 
