@@ -9,7 +9,7 @@ import { ImageGallery } from "@/components/ImageGallery";
       id: "2025-01",
       title: "2025年 新年会",
       date: "2025-01-18",
-      location: "新宿 某居酒屋",
+      location: "大阪西成区 中華居酒屋",
       description: "2025年の幕開けを祝う新年会を開催しました。久しぶりの再会で話が尽きず、あっという間の3時間でした.",
       images: ["/25_1.jpg"]
     },
@@ -17,7 +17,7 @@ import { ImageGallery } from "@/components/ImageGallery";
       id: "2025-03",
       title: "2025年 3月飲み会",
       date: "2025-03-29",
-      location: "渋谷",
+      location: "大阪梅田 絆鳥居酒屋",
       description: "春の飲み会！桜の季節に合わせて開催.",
       images: ["/25_3_1.JPG", "/25_3_2.JPG", "/25_3_3.JPG", "/25_3_4.JPG"]
     }

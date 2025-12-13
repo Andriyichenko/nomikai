@@ -31,8 +31,11 @@ export default function ReservePage() {
             <ArrowLeft className="w-5 h-5" />
             <span className="font-bold">TOP</span>
         </Link>
-        <h1 className="font-bold text-lg">25年3月飲み会 予約</h1>
-        <div className="w-16"></div> 
+        <h1 className="font-bold text-lg hidden md:block">25年3月飲み会 予約</h1>
+        <Link href="/dashboard" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition text-sm font-bold">
+            <span className="hidden md:inline">My Page</span>
+            <LogIn className="w-4 h-4" />
+        </Link>
       </div>
       
       <div className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-8">
