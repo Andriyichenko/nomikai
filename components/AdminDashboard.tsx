@@ -51,6 +51,8 @@ export default function AdminDashboard() {
   
   const [resSearch, setResSearch] = useState("");
   const [aggregatedReservations, setAggregatedReservations] = useState<AdminAggregatedReservation[]>([]);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectedDateReservations, setSelectedDateReservations] = useState<RawReservation[]>([]);
 
   // Archive State
   const [isEditingArchive, setIsEditingArchive] = useState(false);
@@ -224,6 +226,14 @@ export default function AdminDashboard() {
   rawReservations.forEach(r => { if (Array.isArray(r.availableDates)) { r.availableDates.forEach(date => { dateCounts[date] = (dateCounts[date] || 0) + 1; }); } }); 
   const chartData = Object.entries(dateCounts).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
 
+    const handleDateBarClick = (entry: any) => {
+            const date = entry?.payload?.date;
+            if (!date) return;
+            const matches = rawReservations.filter(r => Array.isArray(r.availableDates) && r.availableDates.includes(date));
+            setSelectedDate(date);
+            setSelectedDateReservations(matches);
+    };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#1e3820]" /></div>;
 
   return (
@@ -271,7 +281,63 @@ export default function AdminDashboard() {
                         ))}
                     </div>
                 )}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><BarChart3 className="text-[#ff0072]" /> 日程別 参加者統計</h2><div className="h-[300px] w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><XAxis dataKey="date" /><YAxis allowDecimals={false} /><Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} /><Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#1e3820" /></BarChart></ResponsiveContainer></div></div>
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <BarChart3 className="text-[#ff0072]" /> 日程別 参加者統計
+                                    </h2>
+                                    <p className="text-sm text-gray-500 mb-4">バーをクリックして該当日の予約者を表示</p>
+                                    <div className="h-[300px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={chartData}>
+                                                <XAxis dataKey="date" />
+                                                <YAxis allowDecimals={false} />
+                                                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                                <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#1e3820" onClick={handleDateBarClick} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {selectedDate && (
+                                        <div className="mt-6 border-t pt-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div>
+                                                    <div className="text-xs text-gray-400">選択日</div>
+                                                    <div className="text-lg font-bold text-gray-800">{selectedDate}</div>
+                                                    <div className="text-sm text-gray-500">{selectedDateReservations.length} 件の予約</div>
+                                                </div>
+                                                <button onClick={() => { setSelectedDate(null); setSelectedDateReservations([]); }} className="text-gray-400 hover:text-gray-600 transition">
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                            {selectedDateReservations.length === 0 ? (
+                                                <div className="text-sm text-gray-500">該当データがありません。</div>
+                                            ) : (
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-sm text-left text-gray-700">
+                                                        <thead className="bg-gray-50 text-xs uppercase text-gray-400">
+                                                            <tr>
+                                                                <th className="px-4 py-2">ユーザー</th>
+                                                                <th className="px-4 py-2">メール</th>
+                                                                <th className="px-4 py-2">メッセージ</th>
+                                                                <th className="px-4 py-2">登録日時</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {selectedDateReservations.map(r => (
+                                                                <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50">
+                                                                    <td className="px-4 py-2 font-bold text-gray-900">{r.name}</td>
+                                                                    <td className="px-4 py-2 text-gray-600">{r.email}</td>
+                                                                    <td className="px-4 py-2 text-gray-600 max-w-xs truncate">{r.message || '-'}</td>
+                                                                    <td className="px-4 py-2 text-xs text-gray-400">{new Date(r.createdAt).toLocaleString('ja-JP')}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
             </div>
         )}
 
