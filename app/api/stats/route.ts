@@ -20,10 +20,16 @@ export async function GET() {
           }
       });
       
-      const parsed = reservations.map(r => ({
-          name: r.name,
-          availableDates: JSON.parse(r.availableDates) as string[]
-      }));
+      const parsed = reservations.map(r => {
+          try {
+              return {
+                  name: r.name,
+                  availableDates: JSON.parse(r.availableDates) as string[]
+              };
+          } catch (e) {
+              return { name: r.name, availableDates: [] };
+          }
+      });
 
       return NextResponse.json(parsed);
   } catch (error) {

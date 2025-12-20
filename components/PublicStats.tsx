@@ -29,8 +29,34 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
             try {
                 const res = await fetch('/api/stats');
                 if (res.ok) {
-                    const data = await res.json();
+                    const data: PublicReservation[] = await res.json();
                     setStats(data);
+                    
+                    // Auto-select first date with data
+                    const dates = new Set<string>();
+                    data.forEach(r => {
+                        if (Array.isArray(r.availableDates)) {
+                            r.availableDates.forEach(d => {
+                                if (filterRange) {
+                                    const dateObj = parseISO(d);
+                                    const start = parseISO(filterRange.start);
+                                    const end = parseISO(filterRange.end);
+                                    if (dateObj < start || dateObj > end) return;
+                                }
+                                dates.add(d);
+                            });
+                        }
+                    });
+                    
+                    const sortedDates = Array.from(dates).sort();
+                    if (sortedDates.length > 0) {
+                        const firstDate = sortedDates[0];
+                        setSelectedDate(firstDate);
+                        const users = data
+                            .filter(r => r.availableDates.includes(firstDate))
+                            .map(r => r.name);
+                        setSelectedUsers(users);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch stats", error);
@@ -39,7 +65,7 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
             }
         };
         fetchStats();
-    }, []);
+    }, [filterRange]);
 
     // Process data for chart
     const dateCounts: Record<string, number> = {};
@@ -112,7 +138,7 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
             </div>
 
             <div className="p-6">
-                <div className="h-[250px] w-full">
+                <div className="h-[250px] w-full min-h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <XAxis 

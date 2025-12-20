@@ -96,7 +96,7 @@ function LoginContent() {
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             <div className="bg-[#1e3820] p-8 text-center text-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('/noise.png')]"></div>
+                
                 <h1 className="text-3xl font-bold relative z-10">ログイン</h1>
                 <p className="text-sm opacity-80 mt-2 relative z-10">Welcome Back</p>
             </div>
