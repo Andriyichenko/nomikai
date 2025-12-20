@@ -15,8 +15,16 @@ const transporter = nodemailer.createTransport({
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
+    const { email, type } = await request.json();
     if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
+
+    // Check if user exists for registration
+    if (type === 'register') {
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return NextResponse.json({ error: "メールアドレスは既に存在します" }, { status: 400 });
+        }
+    }
 
     // Generate 6 digit code
     const code = randomInt(100000, 999999).toString();

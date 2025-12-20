@@ -18,6 +18,11 @@ const yujiSyuku = Yuji_Syuku({
 export const metadata: Metadata = {
   title: "バース人材 飲み会予約",
   description: "25年3月29日に飲み会",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

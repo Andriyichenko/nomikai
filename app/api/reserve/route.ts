@@ -46,14 +46,17 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // If Admin, return all. If User, return ALL their own reservations.
+  const { searchParams } = new URL(request.url);
+  const isAdminRequest = searchParams.get('admin') === 'true';
+
+  // If Admin AND requesting admin data, return all.
   // @ts-ignore
-  if (session.user.role === 'admin') {
+  if (session.user.role === 'admin' && isAdminRequest) {
       const reservations = await prisma.reservation.findMany({
           orderBy: { createdAt: 'desc' }
       });
@@ -64,7 +67,7 @@ export async function GET() {
       }));
       return NextResponse.json(parsed);
   } else {
-      // Return ALL reservations for the current user
+      // Return ALL reservations for the current user (Personal Mode)
       // @ts-ignore
       const reservations = await prisma.reservation.findMany({
           where: { userId: session.user.id },

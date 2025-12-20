@@ -39,12 +39,15 @@ export default function RegisterPage() {
           const res = await fetch('/api/auth/otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: formData.email })
+              body: JSON.stringify({ email: formData.email, type: 'register' })
           });
-          if (!res.ok) throw new Error("送信に失敗しました");
+          
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "送信に失敗しました");
+          
           setOtpSent(true);
       } catch (e: any) {
-          setError("認証コードの送信に失敗しました。");
+          setError(e.message || "認証コードの送信に失敗しました。");
       } finally {
           setOtpLoading(false);
       }
