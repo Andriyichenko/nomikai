@@ -37,6 +37,8 @@ model Session {
 model User {
   id            String    @id @default(cuid())
   name          String?
+  firstName     String?
+  lastName      String?
   username      String?   @unique
   email         String?   @unique
   emailVerified DateTime?
@@ -49,6 +51,17 @@ model User {
   accounts      Account[]
   sessions      Session[]
   reservations  Reservation[]
+  activities    UserActivity[]
+}
+
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String   // YYYY-MM-DD
+  updateCount Int    @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }
 
 model VerificationToken {
@@ -72,6 +85,7 @@ model Otp {
 model Reservation {
   id             String   @id @default(cuid())
   userId         String?
+  reservationItemId String?
   name           String
   email          String
   availableDates String   
@@ -106,6 +120,10 @@ model ReservationItem {
   date        String   // Keep as fallback/display date
   startDate   String   @default("") // YYYY-MM-DD
   endDate     String   @default("") // YYYY-MM-DD
+  deadline    String   @default("") // YYYY-MM-DD
+  startTime   String   @default("") // HH:mm
+  location    String   @default("")
+  shopName    String   @default("")
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

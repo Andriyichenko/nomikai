@@ -22,6 +22,8 @@ export async function GET() {
             select: {
                 id: true,
                 name: true,
+                firstName: true,
+                lastName: true,
                 username: true,
                 email: true,
                 role: true,
@@ -33,7 +35,10 @@ export async function GET() {
         // Map to frontend interface
         const formattedUsers = users.map(u => ({
             id: u.id,
-            username: u.username || u.name || "No Name", 
+            username: u.username || "",
+            firstName: u.firstName || "",
+            lastName: u.lastName || "",
+            name: u.name || "No Name",
             email: u.email || "",
             role: u.role,
             isSubscribed: u.isSubscribed,
@@ -50,13 +55,15 @@ export async function POST(request: Request) {
     if (!await checkAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     
     try {
-        const { username, password, role } = await request.json();
+        const { username, password, role, firstName, lastName } = await request.json();
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const newUser = await prisma.user.create({
             data: {
                 username,
-                name: username,
+                firstName,
+                lastName,
+                name: firstName && lastName ? `${firstName} ${lastName}` : username,
                 email: username.includes('@') ? username : undefined,
                 password: hashedPassword,
                 role: role || 'user'
@@ -83,7 +90,7 @@ export async function PUT(request: Request) {
 
     try {
         const body = await request.json();
-        const { id, isSubscribed } = body;
+        const { id, isSubscribed, firstName, lastName, role } = body;
 
         // @ts-ignore
         const isSelf = session.user.id === id;
@@ -94,9 +101,22 @@ export async function PUT(request: Request) {
              return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        const data: any = {};
+        if (isSubscribed !== undefined) data.isSubscribed = isSubscribed;
+        
+        // Only admin can change names and roles
+        if (isAdmin) {
+            if (firstName !== undefined) data.firstName = firstName;
+            if (lastName !== undefined) data.lastName = lastName;
+            if (firstName !== undefined && lastName !== undefined) {
+                data.name = `${firstName} ${lastName}`;
+            }
+            if (role !== undefined) data.role = role;
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: { isSubscribed }
+            data
         });
 
         return NextResponse.json(updatedUser);

@@ -16,6 +16,12 @@ export async function GET() {
           select: {
               name: true,
               availableDates: true,
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                }
+              }
               // Intentionally NOT selecting email or message for privacy
           }
       });
@@ -23,11 +29,11 @@ export async function GET() {
       const parsed = reservations.map(r => {
           try {
               return {
-                  name: r.name,
+                  name: r.user?.name || r.user?.username || r.name,
                   availableDates: JSON.parse(r.availableDates) as string[]
               };
           } catch (e) {
-              return { name: r.name, availableDates: [] };
+              return { name: r.user?.name || r.user?.username || r.name, availableDates: [] };
           }
       });
 

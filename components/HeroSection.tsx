@@ -4,16 +4,37 @@ import Link from "next/link";
 import { ArrowRight, Globe } from "lucide-react";
 import Navigation from "./Navigation";
 import LanguageSelector from "./LanguageSelector";
-import { useTheme } from "./ThemeProvider"; // Import useTheme
-import { useTranslation } from "@/hooks/useTranslation"; // To get current lang
+import { useTheme } from "./ThemeProvider"; 
+import { useTranslation } from "@/hooks/useTranslation";
+import { useState, useEffect } from "react";
+
+interface ReservationItem {
+    id: string;
+    title: string;
+    isActive: boolean;
+}
 
 interface HeroSectionProps {
-  lang: "ja" | "cn"; // This prop is used for rendering LanguageSelector, but not directly for content here anymore
+  lang: "ja" | "cn"; 
 }
 
 export default function HeroSection({ lang: propLang }: HeroSectionProps) {
-  const { lang: currentLang } = useTranslation(); // Get language from hook
+  const { lang: currentLang } = useTranslation();
   const { heroTitle, heroSubtitle, heroText, heroTitleCn, heroSubtitleCn, heroTextCn } = useTheme(); 
+  const [projects, setProjects] = useState<ReservationItem[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+
+  useEffect(() => {
+      fetch('/api/reservation-items')
+          .then(res => res.json())
+          .then(data => {
+              if (Array.isArray(data)) {
+                  setProjects(data.filter(p => p.isActive));
+              }
+          })
+          .catch(console.error)
+          .finally(() => setLoadingProjects(false));
+  }, []);
 
   // Select content based on currentLang
   const displayTitle = currentLang === 'cn' ? heroTitleCn : heroTitle;
@@ -24,7 +45,7 @@ export default function HeroSection({ lang: propLang }: HeroSectionProps) {
     ja: {
       topBar: "ユニクロのバース人材，集合！",
       reserveBtn: "予約",
-      otherLang: "🇨🇳 中国語", // Updated to match previous example or correct terminology
+      otherLang: "🇨🇳 中国語", 
       otherLangLink: "/cn",
     },
     cn: {
@@ -35,7 +56,7 @@ export default function HeroSection({ lang: propLang }: HeroSectionProps) {
     },
   };
 
-  const t = content[currentLang]; // Use currentLang for other hardcoded elements like topBar
+  const t = content[currentLang]; 
 
   const subTextLines = displayText ? displayText.split('\n') : [];
 
@@ -43,7 +64,7 @@ export default function HeroSection({ lang: propLang }: HeroSectionProps) {
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center text-white">
       <Navigation lang={currentLang} />
       
-      {/* Top Bar (still hardcoded per lang, could be moved to config too) */}
+      {/* Top Bar */}
       <div className="absolute top-0 w-full bg-[#1e3820] text-white py-3 px-4 text-center font-bold tracking-wide shadow-md z-20">
         {t.topBar}
       </div>
@@ -72,7 +93,7 @@ export default function HeroSection({ lang: propLang }: HeroSectionProps) {
         <div className="flex flex-col md:flex-row gap-6 items-center mt-8">
             <Link 
                 href="/reserve" 
-                className="group relative inline-flex items-center gap-3 px-12 py-4 bg-white text-[#ff0072] text-xl font-black uppercase tracking-widest border-4 border-[#ff0072] hover:bg-[#ff0072] hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(255,0,114,0.3)] hover:shadow-[0_0_40px_rgba(255,0,114,0.6)] rounded-sm"
+                className="group relative inline-flex items-center gap-3 px-12 py-4 bg-white text-[#ff0072] text-xl font-black uppercase tracking-widest border-4 border-[#ff0072] hover:bg-[#ff0072] hover:text-white transition-all duration-300 shadow-[0_0:20px_rgba(255,0,114,0.3)] hover:shadow-[0_0:40px_rgba(255,0,114,0.6)] rounded-xl"
             >
                 {t.reserveBtn}
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />

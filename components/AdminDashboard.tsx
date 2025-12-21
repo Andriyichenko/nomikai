@@ -11,10 +11,10 @@ import { parseISO, format, isAfter, isBefore, startOfDay } from 'date-fns';
 import toast from "react-hot-toast";
 import { emailTemplates } from "@/lib/email-templates/templates";
 
-interface User { id: string; username: string; email: string; role: string; isSubscribed: boolean; createdAt: string; }
-interface RawReservation { id: string; name: string; email: string; availableDates: string[]; message: string; createdAt: string; userId: string; }
+interface User { id: string; username: string; firstName: string; lastName: string; email: string; role: string; isSubscribed: boolean; createdAt: string; }
+interface RawReservation { id: string; name: string; email: string; availableDates: string[]; message: string; createdAt: string; userId: string; reservationItemId: string; }
 interface Event { id: string; title: string; date: string; location: string; description: string; images: string[]; status: string; }
-interface ReservationItem { id: string; title: string; date: string; startDate: string; endDate: string; description?: string; isActive: boolean; }
+interface ReservationItem { id: string; title: string; date: string; startDate: string; endDate: string; deadline: string; startTime: string; location: string; shopName: string; description?: string; isActive: boolean; }
 interface Notice { id?: string; title: string; content: string; updatedAt?: string; }
 interface SiteConfig { 
     primaryColor: string; accentColor: string; fontFamily: string; layout: string; 
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   const [archiveSearch, setArchiveSearch] = useState(""); // Search for Archive
   
   const [isEditingProject, setIsEditingProject] = useState(false);
-  const [currentProject, setCurrentProject] = useState<Partial<ReservationItem>>({ isActive: true, startDate: '', endDate: '' });
+  const [currentProject, setCurrentProject] = useState<Partial<ReservationItem>>({ isActive: true, startDate: '', endDate: '', deadline: '', startTime: '', location: '', shopName: '' });
 
   // Notice State
   const [noticeTitle, setNoticeTitle] = useState("");
@@ -78,6 +78,8 @@ export default function AdminDashboard() {
   const [selectedTemplate, setSelectedTemplate] = useState(""); // Template Selection
   
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Partial<User>>({});
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'user' });
   const [savingConfig, setSavingConfig] = useState(false);
 
@@ -122,40 +124,43 @@ export default function AdminDashboard() {
       const aggregatedResult: Record<string, AdminAggregatedReservation> = {}; 
 
       rawResData.forEach(reservationRecord => {
+        const projectId = reservationRecord.reservationItemId;
+        if (!projectId) return;
+
+        const matchedProject = reservationItemsData.find(p => p.id === projectId);
+        if (!matchedProject) return;
+
+        if (!aggregatedResult[projectId]) {
+            aggregatedResult[projectId] = { projectId: projectId, projectTitle: matchedProject.title, users: [] };
+        }
+
         const userId = reservationRecord.userId;
         const userName = reservationRecord.name;
         const userEmail = reservationRecord.email;
 
-        reservationRecord.availableDates.forEach(dateStr => {
-            const date = parseISO(dateStr);
-            if (isBefore(date, today)) return; 
-
-            const matchedProject = reservationItemsData.find(project => {
-                const projectStart = parseISO(project.startDate);
-                const projectEnd = parseISO(project.endDate);
-                return (isAfter(date, projectStart) || date.getTime() === projectStart.getTime()) && 
-                       (isBefore(date, projectEnd) || date.getTime() === projectEnd.getTime());
-            });
-
-            if (matchedProject) {
-                const projectId = matchedProject.id;
-                if (!aggregatedResult[projectId]) {
-                    aggregatedResult[projectId] = { projectId: projectId, projectTitle: matchedProject.title, users: [] };
-                }
-                let userEntry = aggregatedResult[projectId].users.find(u => u.id === userId);
-                if (!userEntry) {
-                    userEntry = { id: userId, name: userName, email: userEmail, selectedDates: [], message: '', lastUpdated: '1970-01-01T00:00:00.000Z' };
-                    aggregatedResult[projectId].users.push(userEntry);
-                }
-                if (reservationRecord.createdAt > userEntry.lastUpdated) {
-                    userEntry.message = reservationRecord.message || '';
-                    userEntry.lastUpdated = reservationRecord.createdAt;
-                }
-                if (!userEntry.selectedDates.includes(dateStr)) {
-                    userEntry.selectedDates.push(dateStr);
-                }
+        let userEntry = aggregatedResult[projectId].users.find(u => u.id === userId);
+        if (!userEntry) {
+            userEntry = { 
+                id: userId, 
+                name: userName, 
+                email: userEmail, 
+                selectedDates: reservationRecord.availableDates || [], 
+                message: reservationRecord.message || '', 
+                lastUpdated: reservationRecord.createdAt 
+            };
+            aggregatedResult[projectId].users.push(userEntry);
+        } else {
+            // If duplicate user records exist for the same project, take the newest message
+            if (reservationRecord.createdAt > userEntry.lastUpdated) {
+                userEntry.message = reservationRecord.message || '';
+                userEntry.lastUpdated = reservationRecord.createdAt;
+                userEntry.name = userName;
             }
-        });
+            // Merge dates
+            reservationRecord.availableDates?.forEach(d => {
+                if (!userEntry!.selectedDates.includes(d)) userEntry!.selectedDates.push(d);
+            });
+        }
       });
 
       const finalAggregatedReservations = Object.values(aggregatedResult).sort((a, b) => a.projectTitle.localeCompare(b.projectTitle));
@@ -169,6 +174,21 @@ export default function AdminDashboard() {
   };
 
   const handleAddUser = async (e: React.FormEvent) => { e.preventDefault(); try { const res = await fetch('/api/users', { method: 'POST', body: JSON.stringify(newUser) }); if (!res.ok) throw new Error("Failed to add user"); toast.success("ユーザーが追加されました"); setIsAddingUser(false); setNewUser({ username: '', password: '', role: 'user' }); fetchData(); } catch (e: any) { toast.error(e.message || "ユーザーの追加に失敗しました"); console.error(e); } };
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+        const res = await fetch('/api/users', {
+            method: 'PUT',
+            body: JSON.stringify(currentUser)
+        });
+        if (!res.ok) throw new Error("Failed to update user");
+        toast.success("ユーザー情報を更新しました");
+        setIsEditingUser(false);
+        fetchData();
+    } catch (e: any) {
+        toast.error(e.message || "更新に失敗しました");
+    }
+  };
   const handleDeleteUser = async (id: string) => { if (!confirm('本当に削除しますか？')) return; try { const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed to delete user"); toast.success("ユーザーが削除されました"); fetchData(); } catch (e: any) { toast.error(e.message || "ユーザーの削除に失敗しました"); console.error(e); } };
   const handleSaveNotice = async () => { setSavingNotice(true); try { const res = await fetch('/api/notice', { method: 'POST', body: JSON.stringify({ title: noticeTitle, content: noticeContent }) }); if (!res.ok) throw new Error("Failed to save notice"); toast.success("お知らせを更新しました"); fetchData(); } catch (e: any) { toast.error(e.message || "お知らせの保存に失敗しました"); console.error(e); } finally { setSavingNotice(false); } };
   
@@ -344,7 +364,34 @@ export default function AdminDashboard() {
         {/* PROJECTS TAB */}
         {activeTab === 'projects' && (
             <div className="space-y-6 animate-in fade-in">
-                <div className="flex justify-between items-center"><h2 className="text-lg font-bold">予約可能プロジェクト管理</h2><button onClick={() => { setIsEditingProject(true); setCurrentProject({ isActive: true, startDate: '', endDate: '' }); }} className="bg-[#1e3820] text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus size={16} /> New Project</button></div>{isEditingProject && (<form onSubmit={handleSaveProject} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 animate-in slide-in-from-top-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input className="border p-2 rounded" placeholder="タイトル (Title)" value={currentProject.title || ''} onChange={e => setCurrentProject({...currentProject, title: e.target.value})} required /><div className="flex gap-2"><input type="date" className="border p-2 rounded w-full" placeholder="開始日" value={currentProject.startDate || ''} onChange={e => setCurrentProject({...currentProject, startDate: e.target.value})} required /><span className="flex items-center text-gray-400">~</span><input type="date" className="border p-2 rounded w-full" placeholder="終了日" value={currentProject.endDate || ''} onChange={e => setCurrentProject({...currentProject, endDate: e.target.value})} required /></div></div><textarea className="w-full border p-2 rounded mb-4 h-24" placeholder="詳細 (Description)" value={currentProject.description || ''} onChange={e => setCurrentProject({...currentProject, description: e.target.value})} /><label className="flex items-center gap-2 mb-4 cursor-pointer"><input type="checkbox" checked={currentProject.isActive} onChange={e => setCurrentProject({...currentProject, isActive: e.target.checked})} className="w-5 h-5 accent-[#ff0072]" /><span>予約受付中 (Active)</span></label><div className="flex gap-2 justify-end"><button type="button" onClick={() => setIsEditingProject(false)} className="text-gray-500 px-4 py-2">Cancel</button><button type="submit" className="bg-[#ff0072] text-white px-6 py-2 rounded font-bold">Save</button></div></form>)}<div className="grid gap-4">{reservationItems.map(item => (<div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center ${!item.isActive && 'opacity-60 bg-gray-50'}`}><div><h3 className="font-bold text-lg flex items-center gap-2">{item.title}{item.isActive ? <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">Active</span> : <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded">Closed</span>}</h3><div className="text-sm text-gray-500 flex gap-2"><span className="font-mono">{item.startDate}</span><span>~</span><span className="font-mono">{item.endDate}</span></div></div><div className="flex gap-2"><button onClick={() => toggleProjectStatus(item)} className="p-2 text-gray-500 hover:text-gray-700" title={item.isActive ? "Close" : "Open"}>{item.isActive ? <EyeOff size={18} /> : <Eye size={18} />}</button><button onClick={() => { setCurrentProject(item); setIsEditingProject(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={18}/></button><button onClick={() => handleDeleteProject(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded"><Trash2 size={18}/></button></div></div>))}</div>
+                <div className="flex justify-between items-center"><h2 className="text-lg font-bold">予約可能プロジェクト管理</h2><button onClick={() => { setIsEditingProject(true); setCurrentProject({ isActive: true, startDate: '', endDate: '' }); }} className="bg-[#1e3820] text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus size={16} /> New Project</button></div>{isEditingProject && (<form onSubmit={handleSaveProject} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 animate-in slide-in-from-top-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <input className="border p-2 rounded" placeholder="タイトル (Title)" value={currentProject.title || ''} onChange={e => setCurrentProject({...currentProject, title: e.target.value})} required />
+    <div className="flex gap-2">
+        <input type="date" className="border p-2 rounded w-full" placeholder="開始日" value={currentProject.startDate || ''} onChange={e => setCurrentProject({...currentProject, startDate: e.target.value})} required />
+        <span className="flex items-center text-gray-400">~</span>
+        <input type="date" className="border p-2 rounded w-full" placeholder="終了日" value={currentProject.endDate || ''} onChange={e => setCurrentProject({...currentProject, endDate: e.target.value})} required />
+    </div>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div>
+        <label className="block text-xs font-bold text-gray-500 mb-1">締め切り日 (Deadline)</label>
+        <input type="date" className="border p-2 rounded w-full" value={currentProject.deadline || ''} onChange={e => setCurrentProject({...currentProject, deadline: e.target.value})} required />
+    </div>
+    <div>
+        <label className="block text-xs font-bold text-gray-500 mb-1">開始時間 (Start Time)</label>
+        <input type="time" className="border p-2 rounded w-full" value={currentProject.startTime || ''} onChange={e => setCurrentProject({...currentProject, startTime: e.target.value})} required />
+    </div>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+        <label className="block text-xs font-bold text-gray-500 mb-1">店名 (Shop Name)</label>
+        <input className="border p-2 rounded w-full" placeholder="店名" value={currentProject.shopName || ''} onChange={e => setCurrentProject({...currentProject, shopName: e.target.value})} required />
+    </div>
+    <div>
+        <label className="block text-xs font-bold text-gray-500 mb-1">地点 (Location Address)</label>
+        <input className="border p-2 rounded w-full" placeholder="住所" value={currentProject.location || ''} onChange={e => setCurrentProject({...currentProject, location: e.target.value})} required />
+    </div>
+</div><textarea className="w-full border p-2 rounded mb-4 h-24" placeholder="詳細 (Description)" value={currentProject.description || ''} onChange={e => setCurrentProject({...currentProject, description: e.target.value})} /><label className="flex items-center gap-2 mb-4 cursor-pointer"><input type="checkbox" checked={currentProject.isActive} onChange={e => setCurrentProject({...currentProject, isActive: e.target.checked})} className="w-5 h-5 accent-[#ff0072]" /><span>予約受付中 (Active)</span></label><div className="flex gap-2 justify-end"><button type="button" onClick={() => setIsEditingProject(false)} className="text-gray-500 px-4 py-2">Cancel</button><button type="submit" className="bg-[#ff0072] text-white px-6 py-2 rounded font-bold">Save</button></div></form>)}<div className="grid gap-4">{reservationItems.map(item => (<div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center ${!item.isActive && 'opacity-60 bg-gray-50'}`}><div><h3 className="font-bold text-lg flex items-center gap-2">{item.title}{item.isActive ? <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">Active</span> : <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded">Closed</span>}</h3><div className="text-sm text-gray-500 flex gap-2"><span className="font-mono">{item.startDate}</span><span>~</span><span className="font-mono">{item.endDate}</span></div></div><div className="flex gap-2"><button onClick={() => toggleProjectStatus(item)} className="p-2 text-gray-500 hover:text-gray-700" title={item.isActive ? "Close" : "Open"}>{item.isActive ? <EyeOff size={18} /> : <Eye size={18} />}</button><button onClick={() => { setCurrentProject(item); setIsEditingProject(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={18}/></button><button onClick={() => handleDeleteProject(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded"><Trash2 size={18}/></button></div></div>))}</div>
             </div>
         )}
 
@@ -433,7 +480,87 @@ export default function AdminDashboard() {
         {/* USERS - EXISTING (Simplified for brevity) */}
         {activeTab === 'users' && (
             <div className="space-y-6 animate-in fade-in">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-gray-50 border-b"><tr><th className="px-6 py-3">Username</th><th className="px-6 py-3">Role</th><th className="px-6 py-3">Sub</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="border-b hover:bg-gray-50"><td className="px-6 py-4">{u.username}</td><td className="px-6 py-4">{u.role}</td><td className="px-6 py-4">{u.isSubscribed ? <Check size={14} className="text-green-600"/> : "-"}</td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={() => openEmailToUser(u.email)} className="text-blue-500 p-1"><Mail size={16}/></button><button onClick={() => handleDeleteUser(u.id)} className="text-red-500 p-1"><Trash2 size={16}/></button></td></tr>))}</tbody></table></div></div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 border-b">
+                            <tr>
+                                <th className="px-6 py-3">氏名 (Name)</th>
+                                <th className="px-6 py-3">Email</th>
+                                <th className="px-6 py-3">Role</th>
+                                <th className="px-6 py-3">Sub</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map(u => (
+                                <tr key={u.id} className="border-b hover:bg-gray-50">
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold">{u.firstName} {u.lastName}</div>
+                                        <div className="text-xs text-gray-400">{u.username || '-'}</div>
+                                    </td>
+                                    <td className="px-6 py-4">{u.email}</td>
+                                    <td className="px-6 py-4">{u.role}</td>
+                                    <td className="px-6 py-4">{u.isSubscribed ? <Check size={14} className="text-green-600"/> : "-"}</td>
+                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                        <button onClick={() => { setCurrentUser(u); setIsEditingUser(true); }} className="text-blue-500 p-1 hover:bg-blue-50 rounded"><Edit2 size={16}/></button>
+                                        <button onClick={() => openEmailToUser(u.email)} className="text-blue-500 p-1"><Mail size={16}/></button>
+                                        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 p-1"><Trash2 size={16}/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* User Edit Modal */}
+                {isEditingUser && (
+                    <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95">
+                            <div className="p-6 border-b flex justify-between items-center">
+                                <h3 className="font-bold text-lg">ユーザー情報編集</h3>
+                                <button onClick={() => setIsEditingUser(false)}><X size={20}/></button>
+                            </div>
+                            <form onSubmit={handleUpdateUser} className="p-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">姓 (Surname)</label>
+                                        <input 
+                                            className="w-full border p-2 rounded" 
+                                            value={currentUser.firstName || ''} 
+                                            onChange={e => setCurrentUser({...currentUser, firstName: e.target.value})} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">名 (Given Name)</label>
+                                        <input 
+                                            className="w-full border p-2 rounded" 
+                                            value={currentUser.lastName || ''} 
+                                            onChange={e => setCurrentUser({...currentUser, lastName: e.target.value})} 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Role</label>
+                                    <select 
+                                        className="w-full border p-2 rounded"
+                                        value={currentUser.role || 'user'}
+                                        onChange={e => setCurrentUser({...currentUser, role: e.target.value})}
+                                    >
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-4">
+                                    <button type="button" onClick={() => setIsEditingUser(false)} className="px-4 py-2 text-gray-500">キャンセル</button>
+                                    <button type="submit" className="bg-[#1e3820] text-white px-6 py-2 rounded font-bold">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </div>
         )}
         
         {/* NOTICE - IMPROVED */}

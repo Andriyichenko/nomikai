@@ -65,13 +65,45 @@ export default function DashboardPage() {
             fetch('/api/reservation-items') 
         ]);
 
-        const rawReservations: Reservation[] = resRes.ok ? await resRes.json() : [];
+        const reserveData = resRes.ok ? await resRes.json() : { reservations: [] };
+        const rawReservations: Reservation[] = Array.isArray(reserveData.reservations) ? reserveData.reservations : [];
         const allProjects: ReservationItem[] = resItems.ok ? await resItems.json() : [];
 
         const aggregated: Record<string, UserProjectReservation> = {};
         const today = startOfDay(new Date());
 
         rawReservations.forEach(res => {
+            // New logic: Use reservationItemId directly if available
+            const projectId = (res as any).reservationItemId;
+            if (projectId) {
+                const matchedProject = allProjects.find(p => p.id === projectId);
+                if (matchedProject) {
+                    if (!aggregated[projectId]) {
+                        aggregated[projectId] = {
+                            projectId: projectId,
+                            projectTitle: matchedProject.title,
+                            projectStartDate: matchedProject.startDate,
+                            selectedDates: [],
+                            latestMessage: '',
+                            latestSubmissionTime: '1970-01-01T00:00:00.000Z'
+                        };
+                    }
+                    
+                    res.availableDates.forEach(d => {
+                        if (!aggregated[projectId].selectedDates.includes(d)) {
+                            aggregated[projectId].selectedDates.push(d);
+                        }
+                    });
+
+                    if (res.createdAt > aggregated[projectId].latestSubmissionTime) {
+                        aggregated[projectId].latestMessage = res.message || '';
+                        aggregated[projectId].latestSubmissionTime = res.createdAt;
+                    }
+                    return; // Done for this record
+                }
+            }
+
+            // Fallback to date matching for old records without itemId (though we repaired them)
             res.availableDates.forEach(dateStr => {
                 const date = parseISO(dateStr);
                 if (isBefore(date, today)) return; 
@@ -84,9 +116,10 @@ export default function DashboardPage() {
                 });
 
                 if (matchedProject) {
-                    if (!aggregated[matchedProject.id]) {
-                        aggregated[matchedProject.id] = {
-                            projectId: matchedProject.id,
+                    const pid = matchedProject.id;
+                    if (!aggregated[pid]) {
+                        aggregated[pid] = {
+                            projectId: pid,
                             projectTitle: matchedProject.title,
                             projectStartDate: matchedProject.startDate,
                             selectedDates: [],
@@ -95,13 +128,13 @@ export default function DashboardPage() {
                         };
                     }
 
-                    if (!aggregated[matchedProject.id].selectedDates.includes(dateStr)) {
-                        aggregated[matchedProject.id].selectedDates.push(dateStr);
+                    if (!aggregated[pid].selectedDates.includes(dateStr)) {
+                        aggregated[pid].selectedDates.push(dateStr);
                     }
                     
-                    if (res.createdAt > aggregated[matchedProject.id].latestSubmissionTime) {
-                        aggregated[matchedProject.id].latestMessage = res.message || '';
-                        aggregated[matchedProject.id].latestSubmissionTime = res.createdAt;
+                    if (res.createdAt > aggregated[pid].latestSubmissionTime) {
+                        aggregated[pid].latestMessage = res.message || '';
+                        aggregated[pid].latestSubmissionTime = res.createdAt;
                     }
                 }
             });

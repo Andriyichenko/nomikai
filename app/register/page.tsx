@@ -17,6 +17,8 @@ export default function RegisterPage() {
 
   const [formData, setFormData] = useState({
       email: '',
+      firstName: '',
+      lastName: '',
       password: '',
       confirmPassword: '',
       code: '',
@@ -84,6 +86,8 @@ export default function RegisterPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 email: formData.email, 
+                firstName: formData.firstName,
+                lastName: formData.lastName,
                 password: formData.password,
                 code: formData.code,
                 isSubscribed: formData.isSubscribed
@@ -174,6 +178,33 @@ export default function RegisterPage() {
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3820] outline-none tracking-widest text-lg"
                                     placeholder="123456"
                                     value={formData.code}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">姓 (Surname)</label>
+                                <input
+                                    name="firstName"
+                                    type="text"
+                                    required
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3820] outline-none"
+                                    placeholder="姓"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">名 (Given Name)</label>
+                                <input
+                                    name="lastName"
+                                    type="text"
+                                    required
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3820] outline-none"
+                                    placeholder="名"
+                                    value={formData.lastName}
                                     onChange={handleChange}
                                 />
                             </div>

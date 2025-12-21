@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { title, date, startDate, endDate, description, isActive } = body;
+        const { title, date, startDate, endDate, description, isActive, deadline, startTime, location, shopName } = body;
 
         const item = await prisma.reservationItem.create({
             data: { 
@@ -33,6 +33,10 @@ export async function POST(request: Request) {
                 date: date || startDate, 
                 startDate: startDate || date,
                 endDate: endDate || startDate || date,
+                deadline: deadline || "",
+                startTime: startTime || "",
+                location: location || "",
+                shopName: shopName || "",
                 description, 
                 isActive: isActive ?? true 
             }
@@ -49,7 +53,7 @@ export async function PUT(request: Request) {
 
     try {
         const body = await request.json();
-        const { id, title, date, startDate, endDate, description, isActive } = body;
+        const { id, title, date, startDate, endDate, description, isActive, deadline, startTime, location, shopName } = body;
 
         const item = await prisma.reservationItem.update({
             where: { id },
@@ -58,6 +62,10 @@ export async function PUT(request: Request) {
                 date,
                 startDate,
                 endDate,
+                deadline,
+                startTime,
+                location,
+                shopName,
                 description, 
                 isActive 
             }

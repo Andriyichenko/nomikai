@@ -75,15 +75,18 @@ export async function GET(request: Request) {
               where: {
                   OR: [
                       { name: { contains: q } },
+                      { user: { is: { name: { contains: q } } } },
+                      { user: { is: { username: { contains: q } } } },
                       { message: { contains: q } }
                   ]
               },
-              take: 5
+              take: 5,
+              include: { user: { select: { name: true, username: true } } }
           });
           reservations.forEach(r => results.push({ 
               type: 'reservation', 
               id: r.id, 
-              title: r.name, 
+              title: r.user?.username || r.user?.name || r.name, 
               sub: r.message || 'No message', 
               href: '/admin' 
           }));
