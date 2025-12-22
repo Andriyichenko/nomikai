@@ -241,17 +241,37 @@ export default function AdminDashboard() {
       e.location.toLowerCase().includes(archiveSearch.toLowerCase())
   );
 
-  // Viz Logic
+  // Viz Logic - Unified with PublicStats logic (using aggregated data)
   const dateCounts: Record<string, number> = {};
-  rawReservations.forEach(r => { if (Array.isArray(r.availableDates)) { r.availableDates.forEach(date => { dateCounts[date] = (dateCounts[date] || 0) + 1; }); } }); 
+  aggregatedReservations.forEach(project => {
+      project.users.forEach(user => {
+          user.selectedDates.forEach(date => {
+              dateCounts[date] = (dateCounts[date] || 0) + 1;
+          });
+      });
+  });
+  
   const chartData = Object.entries(dateCounts).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
 
     const handleDateBarClick = (entry: any) => {
             const date = entry?.payload?.date;
             if (!date) return;
-            const matches = rawReservations.filter(r => Array.isArray(r.availableDates) && r.availableDates.includes(date));
+            
+            // Get unique users across all projects for this date
+            const uniqueMatches: any[] = [];
+            const seenUserIds = new Set();
+
+            aggregatedReservations.forEach(project => {
+                project.users.forEach(user => {
+                    if (user.selectedDates.includes(date) && !seenUserIds.has(user.id)) {
+                        seenUserIds.add(user.id);
+                        uniqueMatches.push(user);
+                    }
+                });
+            });
+
             setSelectedDate(date);
-            setSelectedDateReservations(matches);
+            setSelectedDateReservations(uniqueMatches);
     };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#1e3820]" /></div>;
