@@ -5,11 +5,12 @@ import { ArrowLeft, LogIn } from "lucide-react";
 import ReservationForm from "@/components/ReservationForm";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function ReservePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [displayName, setDisplayName] = useState("");
 
   // Redirect if not logged in
   useEffect(() => {
@@ -17,6 +18,12 @@ export default function ReservePage() {
         router.push("/login");
     }
   }, [status, router]);
+
+  useEffect(() => {
+      if (session?.user?.name && !displayName) {
+          setDisplayName(session.user.name);
+      }
+  }, [session, displayName]);
 
   if (status === "loading") {
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -42,10 +49,10 @@ export default function ReservePage() {
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
             <div className="bg-gradient-to-r from-[#ff0072] to-[#d90061] p-6 md:p-8 text-white text-center">
                 <h2 className="text-2xl md:text-3xl font-black mb-2 tracking-tight">参加予約フォーム</h2>
-                <p className="opacity-90 text-sm md:text-base font-medium">ようこそ、{session.user?.name || session.user?.email} さん</p>
+                <p className="opacity-90 text-sm md:text-base font-medium">ようこそ、{displayName} さん</p>
             </div>
             <div className="p-5 md:p-10">
-                <ReservationForm />
+                <ReservationForm onNameLoaded={setDisplayName} />
             </div>
         </div>
       </div>

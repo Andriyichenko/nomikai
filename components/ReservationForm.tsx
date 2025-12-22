@@ -35,7 +35,11 @@ interface UserReservation {
     message: string;
 }
 
-export default function ReservationForm() {
+interface ReservationFormProps {
+    onNameLoaded?: (name: string) => void;
+}
+
+export default function ReservationForm({ onNameLoaded }: ReservationFormProps) {
   const { t, lang } = useTranslation();
   const { data: session } = useSession();
   const router = useRouter();
@@ -78,9 +82,12 @@ export default function ReservationForm() {
 
           setItems(itemsData);
           const user = reserveData.user;
-          setUserName(user?.name || "");
+          const currentName = user?.name || "";
+          setUserName(currentName);
           setUserEmail(user?.email || "");
           setRemainingUpdates(reserveData.remainingUpdates ?? 5);
+          
+          if (onNameLoaded) onNameLoaded(currentName);
           
           if (!user?.firstName || !user?.lastName) {
               setIsNameMissing(true);
@@ -183,7 +190,8 @@ export default function ReservationForm() {
           <CheckCircle2 className="w-8 h-8 text-green-600" />
         </div>
         <h3 className="text-2xl font-bold text-green-800 mb-2">送信完了</h3>
-        <p className="text-gray-600 mb-2">予約内容を保存しました。確認メールをお送りしましたのでご確認ください。</p>
+        <p className="text-gray-600 mb-2">予約内容を保存しました。</p>
+        <p className="text-gray-600 mb-4">確認メールをお送りしましたのでご確認ください。</p>
         <p className="text-sm text-[#ff0072] font-bold mb-6">
             {lang === 'cn' ? '在这个活动的截止日期之后会送出最终确定的邮箱，请查收。' : 'イベントの締め切り日以降に最終確定メールをお送りしますので、ご確認ください。'}
         </p>
@@ -259,31 +267,53 @@ export default function ReservationForm() {
 
                     return (
                         <div key={item.id} className={`border rounded-2xl transition-all overflow-hidden bg-white ${isExpanded ? 'border-[#1e3820] ring-4 ring-[#1e3820]/5 shadow-lg' : 'border-gray-200 hover:border-gray-300 shadow-sm'}`}>
-                            <div onClick={() => setExpandedItemId(isExpanded ? null : item.id)} className={`p-5 cursor-pointer flex items-center justify-between ${isExpanded ? 'bg-gray-50' : ''}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isReserved ? 'bg-[#ff0072] text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                        <CalendarIcon size={24} />
+                            <div onClick={() => setExpandedItemId(isExpanded ? null : item.id)} className={`p-4 md:p-5 cursor-pointer flex flex-col gap-4 ${isExpanded ? 'bg-gray-50' : ''}`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                                        <div className={`w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors ${isReserved ? 'bg-[#ff0072] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                            <CalendarIcon size={20} className="md:w-6 md:h-6" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-black text-gray-800 text-base md:text-lg leading-tight truncate">{item.title}</h4>
+                                            <p className="text-[10px] md:text-xs text-gray-400 font-mono mt-1 flex items-center gap-1.5">
+                                                <span className="hidden md:inline">期間:</span>
+                                                {item.startDate} ~ {item.endDate}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-black text-gray-800 text-lg leading-tight">{item.title}</h4>
-                                        <p className="text-xs text-gray-400 font-mono mt-1">{item.startDate} ~ {item.endDate}</p>
+                                    
+                                    <div className="flex items-center gap-2 md:hidden">
+                                        <div className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'}>
+                                            <ChevronDown size={18} className="text-gray-400" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 sm:gap-4">
-                                    <button 
-                                        type="button" 
-                                        onClick={(e) => { e.stopPropagation(); setCurrentStatsFilter({ start: item.startDate, end: item.endDate }); setShowStats(true); }}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff0072]/10 text-[#ff0072] rounded-full hover:bg-[#ff0072] hover:text-white transition-all duration-300 shadow-sm active:scale-95 border border-[#ff0072]/20"
-                                    >
-                                        <BarChart3 className="w-3.5 h-3.5" />
-                                        <span className="text-[10px] font-bold whitespace-nowrap hidden sm:inline">
-                                            {lang === 'cn' ? '查看参加状况' : '参加状況を確認'}
-                                        </span>
-                                    </button>
-                                    
-                                    <div className="flex items-center gap-2">
-                                        {isReserved && <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-full uppercase">Reserved</span>}
-                                        {isExpanded ? <ChevronUp className="text-gray-400 shrink-0" /> : <ChevronDown className="text-gray-400 shrink-0" />}
+
+                                <div className="flex items-center justify-between pt-1 md:pt-0">
+                                    <div className="flex items-center gap-3">
+                                        <button 
+                                            type="button" 
+                                            onClick={(e) => { e.stopPropagation(); setCurrentStatsFilter({ start: item.startDate, end: item.endDate }); setShowStats(true); }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff0072]/5 text-[#ff0072] rounded-full hover:bg-[#ff0072] hover:text-white transition-all duration-300 border border-[#ff0072]/10 active:scale-95"
+                                        >
+                                            <BarChart3 className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] font-bold whitespace-nowrap">
+                                                {lang === 'cn' ? '确认状况' : '予約確認'}
+                                            </span>
+                                        </button>
+
+                                        {/* Mobile Reserved Badge moved here */}
+                                        {isReserved && (
+                                            <div className="md:hidden flex items-center gap-1 bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100">
+                                                <Check size={10} strokeWidth={3} />
+                                                <span className="text-[9px] font-black uppercase tracking-wider">Reserved</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="hidden md:flex items-center gap-4">
+                                        {isReserved && <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Reserved</span>}
+                                        {isExpanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
                                     </div>
                                 </div>
                             </div>
