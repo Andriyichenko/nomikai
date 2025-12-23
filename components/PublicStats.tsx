@@ -2,22 +2,26 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Loader2, Users, Calendar, Info } from "lucide-react";
+import { Loader2, Users, Calendar, Info, X } from "lucide-react";
 import { format, parseISO } from 'date-fns';
 
 interface PublicReservation {
     name: string;
+    image?: string | null;
+    firstName?: string;
     availableDates: string[];
+    reservationItemId: string;
 }
 
 interface PublicStatsProps {
+    projectId?: string;
     filterRange?: {
         start: string;
         end: string;
     };
 }
 
-export default function PublicStats({ filterRange }: PublicStatsProps) {
+export default function PublicStats({ projectId, filterRange }: PublicStatsProps) {
     const [stats, setStats] = useState<PublicReservation[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -41,10 +45,21 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
 
     // 1. 数据聚合：按用户名汇总日期，去重
     const aggregatedData = useMemo(() => {
-        const userMap: Record<string, Set<string>> = {};
+        const userMap: Record<string, { name: string, image?: string | null, firstName?: string, dates: Set<string>, reservationItemId: string }> = {};
         
         stats.forEach(r => {
-            if (!userMap[r.name]) userMap[r.name] = new Set();
+            // Filter by projectId if provided
+            if (projectId && r.reservationItemId !== projectId) return;
+
+            if (!userMap[r.name]) {
+                userMap[r.name] = { 
+                    name: r.name, 
+                    image: r.image, 
+                    firstName: r.firstName, 
+                    dates: new Set(),
+                    reservationItemId: r.reservationItemId
+                };
+            }
             r.availableDates.forEach(date => {
                 if (filterRange) {
                     const d = parseISO(date);
@@ -52,15 +67,15 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
                     const end = parseISO(filterRange.end);
                     if (d < start || d > end) return;
                 }
-                userMap[r.name].add(date);
+                userMap[r.name].dates.add(date);
             });
         });
 
-        return Object.entries(userMap).map(([name, dates]) => ({
-            name,
-            dates: Array.from(dates).sort()
+        return Object.values(userMap).map(user => ({
+            ...user,
+            dates: Array.from(user.dates).sort()
         })).sort((a, b) => a.name.localeCompare(b.name));
-    }, [stats, filterRange]);
+    }, [stats, filterRange, projectId]);
 
     // 2. 图表数据计算
     const chartData = useMemo(() => {
@@ -103,7 +118,7 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
     }
 
     return (
-        <div className="flex flex-col gap-6 animate-in fade-in duration-500 max-w-full overflow-hidden">
+        <div className="flex flex-col gap-6 animate-in fade-in duration-500 max-w-full overflow-hidden text-[#1e3820]">
             {/* 顶部统计图表 */}
             <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-100 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -129,7 +144,7 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
                     </div>
                 </div>
 
-                <div className="h-[180px] md:h-[220px] w-full">
+                <div className="h-[180px] md:h-[220px] w-full min-h-[180px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} onClick={(data) => {
                             if (data?.activeLabel) {
@@ -204,8 +219,12 @@ export default function PublicStats({ filterRange }: PublicStatsProps) {
                                     <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-4 md:px-6 py-4">
                                             <div className="flex items-center gap-2 md:gap-3">
-                                                <div className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-[10px] font-bold text-[#1e3820] shadow-sm border border-white">
-                                                    {user.name.charAt(0).toUpperCase()}
+                                                <div className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-[#1e3820] shadow-sm border border-white">
+                                                    {user.image ? (
+                                                        <img src={user.image} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span>{(user.firstName || user.name).charAt(0).toUpperCase()}</span>
+                                                    )}
                                                 </div>
                                                 <span className="font-bold text-gray-700 truncate max-w-[100px] md:max-w-none">{user.name}</span>
                                             </div>

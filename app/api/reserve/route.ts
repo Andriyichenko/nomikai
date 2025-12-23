@@ -58,7 +58,7 @@ async function sendConfirmationEmail(email: string, name: string, dates: string[
 ■ メッセージ: ${message || 'なし'}
 ■ 予約締め切り日: ${project.deadline || '-'}
 
-イベントの締め切り日以降に、最終確定のご案内を改めてお送りいたします。
+イベントの締め切り日以降、最終確定のご案内を改めてお送りいたしますので、何卒ご了承ください。
 
 --------------------------------------------------
 ${footer}

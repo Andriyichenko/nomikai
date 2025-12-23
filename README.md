@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nomikai 利用ガイド / 使い方（ユーザー・管理者）
 
-## Getting Started
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)](#)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](#)
+[![NextAuth](https://img.shields.io/badge/NextAuth.js-Auth-000000?logo=auth0&logoColor=white)](#)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)](#)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwindcss&logoColor=white)](#)
 
-First, run the development server:
+---
+
+## 目次
+- [1. サービス概要](#1-サービス概要)
+- [2. 言語切り替え（URL）](#2-言語切り替えurl)
+- [3. ログイン](#3-ログイン)
+- [4. 予約（参加可能日を選択）](#4-予約参加可能日を選択)
+- [5. 自分の予約を確認・変更・キャンセル](#5-自分の予約を確認変更キャンセル)
+- [6. 管理者（/admin）](#6-管理者admin)
+- [7. よくあるトラブル](#7-よくあるトラブル)
+- [8. 開発者向け（ローカル起動）](#8-開発者向けローカル起動)
+- [9. セキュリティ注意](#9-セキュリティ注意)
+
+---
+
+## 1. サービス概要
+Nomikai は、日/中（日本語・中国語）対応のイベント予約サイトです。ログイン後、カレンダーから参加可能日を複数選択して予約できます。管理者はイベント・お知らせ・予約集計を管理できます。
+
+---
+
+## 2. 言語切り替え（URL）
+本プロジェクトは **パスプレフィックス**で言語を切り替えます。
+
+- **日本語（デフォルト）**：`/`
+- **中文（简体）**：`/cn`
+
+例：
+- トップ（日本語）：`http://localhost:3000/`
+- トップ（中文）：`http://localhost:3000/cn`
+
+---
+
+## 3. ログイン
+画面のログイン導線から認証します（UIはページにより異なる場合があります）。
+
+対応：
+- Google OAuth
+- メール/パスワード
+- メールOTP（ワンタイムコード / マジックリンク系フロー）
+
+---
+
+## 4. 予約（参加可能日を選択）
+1. 予約ページへ移動（通常 `/reserve`）
+2. カレンダーで **参加可能日を選択（複数可）**
+3. 必要に応じてメッセージ（備考）を入力
+4. 送信して予約完了
+
+予約日は `YYYY-MM-DD` 形式で保存されます。
+
+---
+
+## 5. 自分の予約を確認・変更・キャンセル
+予約ページ（または「マイ予約」相当）で以下が可能です。
+
+- **確認**：現在の選択日・メッセージの閲覧
+- **変更**：日付/メッセージを更新して保存
+- **キャンセル**：予約を削除
+
+### 表示名（ユーザー名）について
+ユーザー名を変更した場合、予約の表示名は **常に現在のユーザー名で表示**されます（同一ユーザーが新旧2つの名前で表示されない想定）。
+
+---
+
+## 6. 管理者（/admin）
+管理者ページ：`/admin`
+
+主な機能（実装状況により表示は異なる場合があります）：
+- イベント管理（作成/編集/削除、画像など）
+- お知らせ（Notice）管理
+- 予約の集計・可視化（グラフ/一覧）
+  - 日付別・ユーザー別の確認（ダッシュボードのUIに依存）
+
+管理者権限がない場合、アクセスは拒否/制限されます。
+
+---
+
+## 7. よくあるトラブル
+- **ページが読み込めない**：リロード → ログイン状態を確認 → `/cn` の有無（言語）を確認
+- **予約が保存されない**：送信ボタン押下後の通知を確認。未ログインなら先にログイン
+- **OTPが届かない**：迷惑メール確認。メール設定（SMTP）が正しいか管理者が確認
+
+---
+
+## 8. 開発者向け（ローカル起動）
+前提：Node.js / npm
 
 ```bash
+npm install
+npx prisma generate
+npx prisma db push
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 起動後：`http://localhost:3000`
+- DB確認：`npx prisma studio`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 9. セキュリティ注意
+- `.env` には DB/認証/SMTP 等の秘匿情報が含まれます。
+- `.env` を Git にコミットしないでください。
+- 画面共有/チャット貼り付け時は値を必ずマスクしてください。

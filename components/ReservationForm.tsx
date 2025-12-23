@@ -449,7 +449,7 @@ export default function ReservationForm({ onNameLoaded }: ReservationFormProps) 
             <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 relative">
                     <button onClick={() => setShowStats(false)} className="absolute right-4 top-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full z-10 transition-colors"><X className="w-5 h-5 text-gray-600" /></button>
-                    <div className="p-4 md:p-8"><PublicStats filterRange={currentStatsFilter} /></div>
+                    <div className="p-4 md:p-8"><PublicStats projectId={expandedItemId || undefined} filterRange={currentStatsFilter} /></div>
                 </div>
             </div>
         )}
