@@ -12,8 +12,9 @@ const events = [
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q');
+  const fuzziness = searchParams.get('fuzziness') || 'medium'; // Low, Medium, High
 
-  if (!q || q.length < 2) {
+  if (!q || q.trim().length < 1) {
       return NextResponse.json([]);
   }
 
@@ -25,75 +26,81 @@ export async function GET(request: Request) {
       const results: any[] = [];
       const lowerQ = q.toLowerCase();
 
+      // Helper to push with score
+      const addResult = (item: any, score: number) => {
+          results.push({ ...item, score });
+      };
+
       // 1. Search Static Events (Archive)
       events.forEach((e, index) => {
-          if (e.title.toLowerCase().includes(lowerQ) || e.content.toLowerCase().includes(lowerQ)) {
-              results.push({ 
+          let score = 0;
+          if (e.title.toLowerCase().includes(lowerQ)) score = 15;
+          else if (e.content.toLowerCase().includes(lowerQ)) score = 5;
+          
+          if (score > 0) {
+              addResult({ 
                   type: 'event', 
                   id: e.id, 
                   title: e.title, 
-                  sub: 'Event Archive', 
+                  sub: '過去のイベント', 
                   href: `/archive/${index}` 
-              });
+              }, score);
           }
       });
 
-      // 2. Search Notices (Public)
+      // 2. Search Active Projects (Reservation Items)
+      const projects = await prisma.reservationItem.findMany({
+          where: {
+              OR: [
+                  { title: { contains: q, mode: 'insensitive' } },
+                  { shopName: { contains: q, mode: 'insensitive' } },
+                  { description: { contains: q, mode: 'insensitive' } }
+              ]
+          },
+          take: 10
+      });
+      projects.forEach(p => {
+          const score = p.title.toLowerCase().includes(lowerQ) ? 20 : 10;
+          addResult({ 
+              type: 'reservation', 
+              id: p.id, 
+              title: p.title, 
+              sub: p.shopName || '予約受付中', 
+              href: '/reserve' 
+          }, score);
+      });
+
+      // 3. Search Notices
       const notices = await prisma.notice.findMany({
           where: {
               OR: [
-                  { title: { contains: q } },
-                  { content: { contains: q } }
+                  { title: { contains: q, mode: 'insensitive' } },
+                  { content: { contains: q, mode: 'insensitive' } }
               ]
           },
-          take: 5
+          take: 10
       });
-      notices.forEach(n => results.push({ type: 'notice', id: n.id, title: n.title, sub: 'Notice', href: '/notice' }));
+      notices.forEach(n => {
+          const score = n.title.toLowerCase().includes(lowerQ) ? 12 : 6;
+          addResult({ 
+              type: 'notice', 
+              id: n.id, 
+              title: n.title, 
+              sub: 'お知らせ', 
+              href: '/notice' 
+          }, score);
+      });
 
-      // 3. Admin Only Searches
-      if (isAdmin) {
-          // Users
-          const users = await prisma.user.findMany({
-              where: {
-                  OR: [
-                      { name: { contains: q } },
-                      { email: { contains: q } }
-                  ]
-              },
-              take: 5
-          });
-          users.forEach(u => results.push({ 
-              type: 'user', 
-              id: u.id, 
-              title: u.name || 'User', 
-              sub: u.email || 'No Email', 
-              href: '/admin' // Or specific user detail page if exists
-          }));
+      // Final sort and deduplicate
+      const sortedResults = results
+          .sort((a, b) => b.score - a.score)
+          .filter((v, i, a) => a.findIndex(t => (t.id === v.id && t.type === v.type)) === i)
+          .slice(0, 15)
+          .map(({ score, ...rest }) => rest);
 
-          // Reservations
-          const reservations = await prisma.reservation.findMany({
-              where: {
-                  OR: [
-                      { name: { contains: q } },
-                      { user: { is: { name: { contains: q } } } },
-                      { user: { is: { username: { contains: q } } } },
-                      { message: { contains: q } }
-                  ]
-              },
-              take: 5,
-              include: { user: { select: { name: true, username: true } } }
-          });
-          reservations.forEach(r => results.push({ 
-              type: 'reservation', 
-              id: r.id, 
-              title: r.user?.username || r.user?.name || r.name, 
-              sub: r.message || 'No message', 
-              href: '/admin' 
-          }));
-      }
-
-      return NextResponse.json(results);
+      return NextResponse.json(sortedResults);
   } catch (error) {
-      return NextResponse.json({ error: "Search failed" }, { status: 500 });
+      console.error(error);
+      return NextResponse.json({ error: "Search logic error" }, { status: 500 });
   }
 }
