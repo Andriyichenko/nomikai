@@ -362,7 +362,7 @@ export default function ReservationForm({ onNameLoaded }: ReservationFormProps) 
                                     </div>
 
                                     <div className="flex flex-col lg:flex-row gap-8">
-                                        <div className="mx-auto lg:mx-0 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                                        <div className="mx-auto lg:mx-0 bg-white border border-gray-100 rounded-xl p-3 shadow-sm w-full overflow-x-auto flex justify-center">
                                             <Calendar
                                                 mode="multiple"
                                                 selected={currentSels}

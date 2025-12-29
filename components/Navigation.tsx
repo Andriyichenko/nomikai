@@ -177,7 +177,7 @@ export default function Navigation({ lang: propLang }: NavigationProps) {
                         </div>
                     </div>
 
-                    <div className="grid gap-1">
+                    <div className="grid gap-3">
                         <Link 
                             href="/dashboard"
                             onClick={() => setIsOpen(false)}
