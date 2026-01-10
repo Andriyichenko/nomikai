@@ -265,8 +265,10 @@ export default function ReservationForm({ onNameLoaded }: ReservationFormProps) 
                     const isReserved = !!reservations[item.id];
                     const currentSels = localSelections[item.id] || [];
 
+                    const isExpired = item.deadline ? isBefore(parseISO(item.deadline), startOfDay(new Date())) : false;
+
                     return (
-                        <div key={item.id} className={`border rounded-2xl transition-all overflow-hidden bg-white ${isExpanded ? 'border-[#1e3820] ring-4 ring-[#1e3820]/5 shadow-lg' : 'border-gray-200 hover:border-gray-300 shadow-sm'}`}>
+                        <div key={item.id} className={`border rounded-2xl transition-all overflow-hidden bg-white ${isExpanded ? 'border-[#1e3820] ring-4 ring-[#1e3820]/5 shadow-lg' : 'border-gray-200 hover:border-gray-300 shadow-sm'} ${isExpired ? 'grayscale opacity-60' : ''}`}>
                             <div onClick={() => setExpandedItemId(isExpanded ? null : item.id)} className={`p-4 md:p-5 cursor-pointer flex flex-col gap-4 ${isExpanded ? 'bg-gray-50' : ''}`}>
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
@@ -303,15 +305,23 @@ export default function ReservationForm({ onNameLoaded }: ReservationFormProps) 
                                         </button>
 
                                         {/* Mobile Reserved Badge moved here */}
-                                        {isReserved && (
-                                            <div className="md:hidden flex items-center gap-1 bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100">
-                                                <Check size={10} strokeWidth={3} />
-                                                <span className="text-[9px] font-black uppercase tracking-wider">Reserved</span>
-                                            </div>
-                                        )}
+                                        <div className="md:hidden flex items-center gap-1">
+                                            {isExpired && (
+                                                <div className="flex items-center gap-1 bg-gray-50 text-gray-600 px-2 py-1 rounded-lg border border-gray-100">
+                                                    <span className="text-[9px] font-black uppercase tracking-wider">{lang === 'cn' ? '已截止' : '受付終了'}</span>
+                                                </div>
+                                            )}
+                                            {isReserved && (
+                                                <div className="flex items-center gap-1 bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100">
+                                                    <Check size={10} strokeWidth={3} />
+                                                    <span className="text-[9px] font-black uppercase tracking-wider">Reserved</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="hidden md:flex items-center gap-4">
+                                        {isExpired && <span className="bg-gray-100 text-gray-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">{lang === 'cn' ? '已截止' : '受付終了'}</span>}
                                         {isReserved && <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Reserved</span>}
                                         {isExpanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
                                     </div>
