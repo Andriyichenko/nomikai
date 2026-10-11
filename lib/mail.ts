@@ -13,15 +13,18 @@ const transporter = configured
 
 export const mailConfigured = configured;
 
+/** Sender name shown in the inbox; fixed so it doesn't change with the site title. */
+export const FROM_NAME = process.env.EMAIL_FROM_NAME || "バース人材-飲み会予約システム";
+
 export type Mail = { to: string; subject: string; html: string; text: string };
 
 /** Sends each mail individually (no shared recipient lists). Failures are logged, never thrown. */
-export async function sendMails(mails: Mail[], fromName: string) {
+export async function sendMails(mails: Mail[]) {
   if (!transporter) return 0;
   let sent = 0;
   for (const m of mails) {
     try {
-      await transporter.sendMail({ from: { name: fromName, address: process.env.EMAIL_FROM! }, ...m });
+      await transporter.sendMail({ from: { name: FROM_NAME, address: process.env.EMAIL_FROM! }, ...m });
       sent++;
     } catch (e) {
       console.error("mail failed", m.to, e);

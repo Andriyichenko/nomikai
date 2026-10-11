@@ -68,7 +68,7 @@ export async function submitResponse(input: z.infer<typeof Input>): Promise<Acti
         updated: Boolean(before),
         site,
       });
-      await sendMails([{ to: profile.email!, ...mail }], `${settings.brand} ${settings.brand_sub}`);
+      await sendMails([{ to: profile.email!, ...mail }]);
     })().catch((e) => console.error("confirmation mail", e));
   }
   return { ok: true };

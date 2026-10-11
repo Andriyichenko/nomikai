@@ -30,7 +30,7 @@ async function context(eventId: string) {
     icsUrl: `${site}/e/${event.slug}/ics`,
     site,
   };
-  return { db, event, shop: s, base, fromName: base.brand };
+  return { db, event, shop: s, base };
 }
 
 /**
@@ -39,7 +39,7 @@ async function context(eventId: string) {
  * Re-deciding resets the attendee list (the date may have changed).
  */
 export async function notifyDecision(eventId: string, note: string, sendMail: boolean) {
-  const { db, event, base, fromName } = await context(eventId);
+  const { db, event, base } = await context(eventId);
   if (!event.decided_date) throw new Error("not decided");
 
   const { data: rows } = await db
@@ -77,7 +77,7 @@ export async function notifyDecision(eventId: string, note: string, sendMail: bo
       }),
     });
   }
-  const mailed = await sendMails(mails, fromName);
+  const mailed = await sendMails(mails);
   return { going: going.length, invited: others.length, mailed };
 }
 
@@ -89,7 +89,7 @@ export async function sendDayOfReminders({ dryRun = false } = {}) {
   const report: { event: string; sent: number; skipped: number }[] = [];
 
   for (const { id } of events ?? []) {
-    const { base, fromName, shop } = await context(id);
+    const { base, shop } = await context(id);
     const { data: rows } = await db
       .from("attendees")
       .select("profile_id, profiles(id, email, display_name)")
@@ -104,7 +104,7 @@ export async function sendDayOfReminders({ dryRun = false } = {}) {
     let sent = 0;
     for (const p of list) {
       const mail = dayOfMail({ ...base, name: p.display_name, note: "", access: shop?.access ?? "" });
-      if (await sendMails([{ to: p.email!, ...mail }], fromName)) {
+      if (await sendMails([{ to: p.email!, ...mail }])) {
         sent++;
         await db.from("attendees").update({ reminded_at: new Date().toISOString() }).eq("event_id", id).eq("profile_id", p.id);
       }
