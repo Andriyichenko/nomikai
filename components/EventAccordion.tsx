@@ -79,7 +79,7 @@ export default function EventAccordion({
                   <p className="mb-2 text-[11px] tracking-wider text-muted">
                     {t.shopsShort} — {e.shops.length}
                   </p>
-                  <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+                  <div className="-mx-4 flex snap-x gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 md:mx-0 md:px-0">
                     {e.shops.map((s) => (
                       <div key={s.id} className="w-36 shrink-0 snap-start md:w-44">
                         <div className="aspect-[4/3] overflow-hidden rounded-xl bg-paper-2">

@@ -95,10 +95,20 @@ export default async function Home() {
       </section>
 
       {decided.length > 0 && (
-        <section className="mx-auto mt-16 max-w-6xl px-4 md:mt-20 md:px-8">
-          <header className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-serif text-xl font-bold tracking-[0.12em] md:text-2xl">{t.home.decided}</h2>
-            <span className="eyebrow">Confirmed</span>
+        <section className="mx-auto mt-16 max-w-6xl px-4 md:mt-24 md:px-8">
+          {/* same scale as the "いま募集中" header so the two sections read as equals */}
+          <header className="mb-6 flex items-end justify-between gap-4 md:mb-8">
+            <div>
+              <p className="flex items-center gap-2 font-display text-sm uppercase tracking-[0.35em] text-muted">
+                <span className="h-2 w-2 rounded-full bg-ink" />
+                Confirmed
+              </p>
+              <h2 className="mt-2 font-serif text-3xl font-bold tracking-[0.12em] md:text-5xl">{t.home.decided}</h2>
+            </div>
+            <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full bg-ink text-paper md:h-16 md:w-16">
+              <span className="font-display text-2xl leading-none md:text-3xl">{decided.length}</span>
+              <span className="text-[10px] tracking-wider">{t.home.openCount(decided.length).replace(/[\d\s]/g, "")}</span>
+            </span>
           </header>
           <EventAccordion
             events={decided}

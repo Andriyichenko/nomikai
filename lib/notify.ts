@@ -4,7 +4,7 @@ import { attendLink, siteUrl } from "./links";
 import { longDate, todayJST } from "./format";
 import { mapUrl } from "./shop-utils";
 import { getSettings } from "./data";
-import { decidedGoingMail, decidedInviteMail, dayOfMail } from "./email/templates";
+import { attendCancelMail, attendJoinMail, decidedGoingMail, decidedInviteMail, dayOfMail } from "./email/templates";
 import { sendMails, type Mail } from "./mail";
 import type { EventRow, Shop } from "./types";
 
@@ -79,6 +79,28 @@ export async function notifyDecision(eventId: string, note: string, sendMail: bo
   }
   const mailed = await sendMails(mails);
   return { going: going.length, invited: others.length, mailed };
+}
+
+type AttendStatus = "going" | "declined" | null;
+
+/**
+ * Mail after a member changes their own attendance: joining (from anything but 'going') gets
+ * a confirmation, going → declined gets a cancellation notice; declining otherwise is silent.
+ * How often this can happen is capped in the DB (attendees_limit_changes, 10 per day).
+ * Never throws — a mail failure must not undo the change.
+ */
+export async function notifyAttendance(eventId: string, profileId: string, before: AttendStatus, after: AttendStatus) {
+  const kind = after === "going" && before !== "going" ? "join" : before === "going" && after === "declined" ? "cancel" : null;
+  if (!kind) return;
+  try {
+    const { db, base } = await context(eventId);
+    const { data: p } = await db.from("profiles").select("email, display_name").eq("id", profileId).single();
+    if (!p?.email) return;
+    const mail = (kind === "join" ? attendJoinMail : attendCancelMail)({ ...base, name: p.display_name, note: "" });
+    await sendMails([{ to: p.email, ...mail }]);
+  } catch (e) {
+    console.error("attendance mail", e);
+  }
 }
 
 /** Morning-of reminder: every 'going' attendee of today's decided events, once. */

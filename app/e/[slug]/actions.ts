@@ -8,6 +8,8 @@ import { responseMail } from "@/lib/email/templates";
 import { sendMails } from "@/lib/mail";
 import { siteUrl } from "@/lib/links";
 import { deadlineLabel, shortDate } from "@/lib/format";
+import { notifyAttendance } from "@/lib/notify";
+import { ATTEND_LIMIT } from "@/lib/types";
 
 const Input = z.object({
   eventId: z.string().uuid(),
@@ -91,8 +93,13 @@ export async function setAttendance(eventId: string, slug: string, going: boolea
   const { error } = existing
     ? await supabase.from("attendees").update(patch).eq("event_id", eventId).eq("profile_id", viewer.profile.id)
     : await supabase.from("attendees").insert({ event_id: eventId, profile_id: viewer.profile.id, ...patch });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    if (error.hint === ATTEND_LIMIT || error.message.includes("attendance change limit")) return { ok: false, error: ATTEND_LIMIT };
+    return { ok: false, error: error.message };
+  }
   revalidatePath(`/e/${slug}`);
+  // awaited for the same reason as the confirmation mail above
+  await notifyAttendance(eventId, viewer.profile.id, (existing?.status as "going" | "declined" | undefined) ?? null, going ? "going" : "declined");
   return { ok: true };
 }
 

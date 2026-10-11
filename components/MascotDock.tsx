@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- tiny fixed sprite; next/image adds nothing here */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -38,30 +38,41 @@ export default function MascotDock({ lang, events, loggedIn }: { lang: Lang; eve
   const [entry, setEntry] = useState(0); // bumps on every appearance to replay the drop + smoke
   const [open, setOpen] = useState(false);
   const [hop, setHop] = useState(0);
+  // survives route changes, so moving between pages (or swiping back) doesn't replay the drop-in
+  const current = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (hidden) return;
     const hero = [...document.querySelectorAll<HTMLElement>("[data-mascot-hero]")].find((h) => h.getBoundingClientRect().width > 0);
-    let current: boolean | null = null;
     const check = () => {
       // docked when there is no hero, or the hero is entirely above the header
       const show = !hero || hero.getBoundingClientRect().bottom <= HEADER;
-      if (show === current) return;
-      current = show;
+      if (show === current.current) return;
+      current.current = show;
       setDocked(show);
       if (show) setEntry((n) => n + 1);
       else setOpen(false);
     };
     check();
-    // Visibility of the hero drives it; the scroll listener is only a fallback.
+    // Visibility of the hero drives it; the scroll listener is only a fallback (once per frame,
+    // and only where there is a hero to measure).
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        check();
+      });
+    };
     const io = hero ? new IntersectionObserver(check, { rootMargin: `-${HEADER}px 0px 0px 0px`, threshold: 0 }) : null;
     if (hero && io) io.observe(hero);
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
+    if (hero) window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
       io?.disconnect();
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, [path, hidden]);
 

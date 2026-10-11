@@ -41,7 +41,7 @@ export default function ArchiveGallery({
         </Link>
       </div>
 
-      <div className="relative mt-12 flex snap-x snap-mandatory gap-8 overflow-x-auto px-6 pb-10 pt-4 [scrollbar-width:none] md:gap-12 md:px-[max(2.5rem,calc((100vw-72rem)/2+2.5rem))] [&::-webkit-scrollbar]:hidden">
+      <div className="relative mt-12 flex snap-x snap-mandatory gap-8 overflow-x-auto overscroll-x-contain px-6 pb-10 pt-4 [scrollbar-width:none] md:gap-12 md:px-[max(2.5rem,calc((100vw-72rem)/2+2.5rem))] [&::-webkit-scrollbar]:hidden">
         {entries.map((a, i) => {
           const c = paletteAt(i);
           const tilt = i % 3 === 0 ? "-rotate-[1.2deg]" : i % 3 === 1 ? "rotate-[1deg]" : "-rotate-[0.4deg]";

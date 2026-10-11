@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicOrigin, verifyAttend } from "@/lib/links";
 import { todayJST } from "@/lib/format";
+import { notifyAttendance } from "@/lib/notify";
 
 /**
  * One-click "参加する / 今回は見送る" from the invitation mail. The link is HMAC-signed per
@@ -22,12 +23,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   if (!ev || !verifyAttend(ev.id, profileId, action, token)) return back("invalid");
   if (ev.status !== "decided" || !ev.decided_date || ev.decided_date < todayJST()) return back("closed");
 
+  const { data: before } = await db
+    .from("attendees")
+    .select("status")
+    .eq("event_id", ev.id)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const status = action === "yes" ? "going" : "declined";
   const { error } = await db.from("attendees").upsert({
     event_id: ev.id,
     profile_id: profileId,
-    status: action === "yes" ? "going" : "declined",
+    status,
     source: "invite",
     updated_at: new Date().toISOString(),
   });
-  return back(error ? "invalid" : action);
+  if (error) return back(error.message.includes("attendance change limit") ? "limit" : "invalid");
+  await notifyAttendance(ev.id, profileId, (before?.status as "going" | "declined" | undefined) ?? null, status);
+  return back(action);
 }

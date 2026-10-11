@@ -173,7 +173,15 @@ export default function VoteForm(props: Props) {
           />
           {needShop && p.isOpen && (
             <div className="absolute inset-0 flex items-center justify-center rounded-[1.25rem] bg-paper/75 backdrop-blur-[2px]">
-              <a href="#step-shops" className="btn btn-primary shadow-soft">
+              <a
+                href="#step-shops"
+                className="btn btn-primary shadow-soft"
+                onClick={(e) => {
+                  // scroll in JS: html has no global smooth scrolling (it fights history navigation)
+                  e.preventDefault();
+                  document.getElementById("step-shops")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
                 ↑ {p.t.pickShopFirst}
               </a>
             </div>

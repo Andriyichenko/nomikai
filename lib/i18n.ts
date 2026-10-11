@@ -92,8 +92,10 @@ const ja = {
     decline: "今回は見送る",
     youGoing: "あなたは参加予定です",
     youDeclined: "今回は見送りにしています",
-    attendBanner: { yes: "参加で登録しました。当日の朝にメールでお知らせします。", no: "今回は見送りで登録しました。また次の会で！", closed: "この会はもう受付を終えています。", invalid: "リンクが無効です。会のページから参加を選んでください。" },
+    attendBanner: { yes: "参加で登録しました。当日の朝にメールでお知らせします。", no: "今回は見送りで登録しました。また次の会で！", closed: "この会はもう受付を終えています。", invalid: "リンクが無効です。会のページから参加を選んでください。", limit: "参加・見送りの切り替えは1日10回までです。また明日どうぞ。" },
     shopsShort: "候補店",
+    seeResults: "みんなの回答を見る",
+    attendLimit: "参加・見送りの切り替えは1日10回までです。また明日どうぞ。",
   },
   login: {
     title: "ログイン",
@@ -157,6 +159,7 @@ const ja = {
     close: "閉じる",
     left: (d: string) => `あと${d}`,
   },
+  footer: { lead: "お店と日程を、みんなで決める。", home: "募集中の会", contact: "お問い合わせ" },
   common: { close: "閉じる", back: "戻る", weekday: ["日", "月", "火", "水", "木", "金", "土"] },
 };
 
@@ -248,13 +251,15 @@ const zh: Dict = {
     notCandidate: "非候选",
     respondentsShort: "回答",
     shopsShort: "候选店",
+    seeResults: "查看大家的回答",
+    attendLimit: "参加 / 不去的切换每天最多 10 次，请明天再试。",
     attendees: "参加成员",
     attendeesCount: (n: number) => `${n} 人将参加`,
     join: "参加",
     decline: "这次不去",
     youGoing: "你已报名参加",
     youDeclined: "你这次选择不去",
-    attendBanner: { yes: "已登记参加！当天早上会发邮件提醒你。", no: "已登记这次不去，下次见！", closed: "这个聚会已经结束报名了。", invalid: "链接无效，请在聚会页面选择是否参加。" },
+    attendBanner: { yes: "已登记参加！当天早上会发邮件提醒你。", no: "已登记这次不去，下次见！", closed: "这个聚会已经结束报名了。", invalid: "链接无效，请在聚会页面选择是否参加。", limit: "参加 / 不去的切换每天最多 10 次，请明天再试。" },
   },
   login: {
     title: "登录",
@@ -318,6 +323,7 @@ const zh: Dict = {
     close: "关闭",
     left: (d: string) => `还剩${d}`,
   },
+  footer: { lead: "店和日子，大家一起定。", home: "正在募集", contact: "联系我们" },
   common: { close: "关闭", back: "返回", weekday: ["日", "一", "二", "三", "四", "五", "六"] },
 };
 

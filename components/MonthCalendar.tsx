@@ -76,7 +76,7 @@ export default function MonthCalendar({
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="flex min-w-0 flex-1 justify-center gap-1 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 justify-center gap-1 overflow-x-auto overscroll-x-contain">
           {months.map((k, i) => {
             const n = pickedIn(k);
             return (

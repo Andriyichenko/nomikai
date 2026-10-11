@@ -42,7 +42,7 @@ To exercise `lib/shop-import.ts` outside Next: `NODE_OPTIONS="--conditions=react
 
 **Mail.** `lib/email/templates.ts` builds the four HTML mails (回答受付 / 決定 / お誘い / 本日) with one inline-styled layout matching `supabase/templates/*.html`; `lib/mail.ts` sends them one by one over SMTP. The response confirmation is awaited inside `submitResponse` (not `after()`, which AWS Amplify may cut off).
 
-**Mascot.** `public/mascot-v2.webp` / `mascot-sm-v2.webp` are generated from `public/shirt_new.png` by `scripts/mascot/cutout.py` (removes the glitch lettering) + `forks.py` (redraws the pallet-jack forks hidden under it). `Splash` (opening ride → "ドロン！"), `HeroMascot` (lands in a smoke puff; tagged `data-mascot-hero`) and `MascotDock` (root layout: flies the hero sprite into the bottom-right corner as you scroll, ninja menu on tap) use them. Bump the file name when regenerating — `next/image` caches by URL.
+**Mascot.** `public/mascot-v3.webp` / `mascot-sm-v3.webp` are generated from `public/shirt_new.png` by `scripts/mascot/cutout.py` (removes the top "バース人材" lettering; `--keep-title` keeps it with an ink outline — that variant, `mascot-title-v4.webp`, is the `Splash` sprite) + `forks.py` (redraws the pallet-jack forks hidden under it). `Splash` (opening ride → "ドロン！"), `HeroMascot` (lands in a smoke puff; tagged `data-mascot-hero`) and `MascotDock` (root layout: flies the hero sprite into the bottom-right corner as you scroll, ninja menu on tap) use them. Bump the file name when regenerating — `next/image` caches by URL.
 
 ## Gotchas
 

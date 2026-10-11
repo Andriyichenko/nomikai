@@ -6,6 +6,7 @@ import SiteFooter from "@/components/SiteFooter";
 import { getLang } from "@/lib/lang";
 import { getPublicEvents, getSettings, getViewer } from "@/lib/data";
 import MascotDock, { type DockEvent } from "@/components/MascotDock";
+import NavMotion from "@/components/NavMotion";
 import { effectiveStatus } from "@/components/StatusPill";
 
 const sans = Noto_Sans_JP({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-noto-sans-jp", display: "swap" });
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
         <SiteFooter />
         <MascotDock lang={lang} events={dockEvents} loggedIn={Boolean(viewer)} />
+        <NavMotion />
       </body>
     </html>
   );

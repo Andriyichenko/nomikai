@@ -56,7 +56,9 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
+    /* No global `scroll-behavior: smooth`: Next restores the scroll position on back/forward,
+       and a smooth restore visibly fights the iOS / Android swipe-back gesture. In-page jumps
+       scroll smoothly via scrollIntoView instead. */
   }
   body {
     background: var(--paper);
@@ -223,9 +225,18 @@
   .fade-in {
     animation: none;
   }
-  html {
-    scroll-behavior: auto;
-  }
+}
+
+/* Back / forward navigation (incl. the swipe-back gesture) shows the page as it was — no
+   entrance animations replaying under the finger. <NavMotion> sets the class on popstate. */
+html.nav-pop .rise,
+html.nav-pop .fade-in,
+html.nav-pop .ninja-land,
+html.nav-pop .puff {
+  animation: none !important;
+}
+html.nav-pop .puff {
+  display: none;
 }
 
 html.splash-seen .splash {

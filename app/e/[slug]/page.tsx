@@ -11,6 +11,7 @@ import { getAttendees, getEventBySlug, getMyAttendance, getMyResponse, getPublic
 import AttendanceBox from "@/components/AttendanceBox";
 import ShopDetailButton from "@/components/ShopDetailButton";
 import OpenEventsSuggest from "@/components/OpenEventsSuggest";
+import JumpToResults from "@/components/JumpToResults";
 import { getDict } from "@/lib/lang";
 import { isPast, longDate, remaining, todayJST } from "@/lib/format";
 
@@ -69,6 +70,9 @@ export default async function EventPage({ params, searchParams }: Params) {
 
         <div className="rise mt-8" style={{ animationDelay: "0.1s" }}>
           <EventFacts event={event} lang={lang} t={t.event} />
+          <div className="mt-3">
+            <JumpToResults label={t.event.seeResults} count={results?.respondents ?? 0} />
+          </div>
         </div>
 
         {event.description && (
@@ -127,10 +131,7 @@ export default async function EventPage({ params, searchParams }: Params) {
         </section>
       )}
 
-      {isDecided ? (
-        // decided: no more voting — point people at what is still open instead
-        <OpenEventsSuggest events={otherOpen} t={t.event} lang={lang} />
-      ) : (
+      {!isDecided && (
         <VoteForm
           eventId={event.id}
           slug={event.slug}
@@ -152,6 +153,13 @@ export default async function EventPage({ params, searchParams }: Params) {
         lang={lang}
         heading={isDecided ? t.event.tallyHistory : undefined}
       />
+
+      {/* decided: no more voting — point people at what is still open, at the very end */}
+      {isDecided && (
+        <div className="mt-20">
+          <OpenEventsSuggest events={otherOpen} t={t.event} lang={lang} />
+        </div>
+      )}
     </article>
   );
 }

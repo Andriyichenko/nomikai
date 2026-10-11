@@ -132,7 +132,7 @@ export default function Splash({ line, caption, brand }: { line: string; caption
               style={{ animation: "ninja-land 0.7s cubic-bezier(0.3,1.2,0.5,1) 0.55s both, fade-out 0.2s ease 2.45s forwards" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/mascot-nosig-v3.webp" alt="" width={546} height={800} className="h-full w-full object-contain object-bottom" />
+              <img src="/mascot-title-v4.webp" alt="" width={583} height={800} className="h-full w-full object-contain object-bottom" />
             </div>
             <span className="absolute inset-0" style={{ animation: "fade-out 0.2s ease 2.45s forwards" }}>
               <Smoke delay={0.95} scale={1.4} className="top-[58%]" />

@@ -5,6 +5,7 @@ from scipy import ndimage
 
 src, out_dir = sys.argv[1], sys.argv[2]
 no_signature = "--no-signature" in sys.argv
+keep_title = "--keep-title" in sys.argv  # splash variant: keep the "バース人材" lettering too
 im = Image.open(src).convert("RGBA")
 W, H = 2828, 4000                      # 2x the 1414x2000 "display" grid used for coordinates
 k = W / 1414
@@ -23,6 +24,8 @@ keep_zone = box(330, 1440, 1270, 1850)
 white = (r >= 250) & (g >= 250) & (b >= 250)
 crimson = ((r > 190) & (g < 70) & (b < 110)) | ((r > 110) & (r <= 220) & (g < 50) & (b < 85))
 text = text_zone & (white | crimson) & (al > 0)
+if keep_title:
+    text = np.zeros_like(text)
 
 keep = (al > 24) & ~text
 # remove thin anti-aliased fringes left over from the glyphs
@@ -32,6 +35,8 @@ sizes = ndimage.sum(keep, lab, range(1, n + 1))
 main_id = int(np.argmax(sizes)) + 1
 # keep the character plus every glyph piece of "集まれ！" (some strokes are separate islands)
 ids = {main_id} | {int(i) for i in np.unique(lab[keep_zone & keep]) if i}
+if keep_title:
+    ids |= {int(i) for i in np.unique(lab[text_zone & keep]) if i}
 sig_box = box(195, 1735, 505, 1995)
 if no_signature:
     # drop the pieces that lie entirely inside the signature area (the artist's autograph)
@@ -40,6 +45,13 @@ main = np.isin(lab, list(ids))
 main = ndimage.binary_closing(main, iterations=2) & (al > 0) & ~text
 out = np.asarray(im).copy()
 out[..., 3] = np.where(main, out[..., 3], 0)
+if keep_title:
+    # white glyphs on the splash's paper/vermilion background are hard to read: give the
+    # "バース人材" lettering a solid ink outline (drawn over its crimson offset, under the white)
+    glyph = text_zone & white & main
+    glyph = ndimage.binary_opening(glyph, iterations=1)
+    ring = ndimage.binary_dilation(glyph, iterations=int(7 * k)) & ~glyph
+    out[ring, 0], out[ring, 1], out[ring, 2], out[ring, 3] = 23, 22, 20, 255
 # the artist's signature (bottom-left) is white in the poster; make it ink so it reads on paper
 sig = sig_box & (r > 238) & (g > 238) & (b > 238)
 out[sig, 0], out[sig, 1], out[sig, 2] = 23, 22, 20

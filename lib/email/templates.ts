@@ -267,3 +267,66 @@ export function dayOfMail(p: Decided & { access: string }) {
   ]);
   return { subject, html, text };
 }
+
+/** 4a) Someone joined a decided event themselves (event page or invitation link). */
+export function attendJoinMail(p: Decided) {
+  const subject = `【参加登録】${p.event.title} — ${p.when}`;
+  const html = layout({
+    brand: p.brand,
+    eyebrow: "See you there",
+    title: "参加、受け付けました。<br>席はちゃんと空けておきます。",
+    lead: `${esc(p.name)} さん、ありがとうございます。<br>参加メンバーに登録しました。`,
+    rows: decidedRows(p),
+    buttons: [
+      ...(p.shop?.mapUrl ? [{ label: "地図を開く", href: p.shop.mapUrl }] : []),
+      { label: "カレンダーに追加", href: p.icsUrl, ghost: true },
+    ],
+    tips: [
+      "当日の朝に、もう一度メールでお知らせします。",
+      `都合が悪くなったら <a href="${esc(p.event.url)}" style="color:${C.accent};">会のページ</a> から「今回は見送る」へ。`,
+    ],
+    zh: `【中文】已登记参加！当天早上会再发邮件提醒你。`,
+    footerUrl: p.site,
+  });
+  const text = plain([
+    `${p.name} さん`,
+    `「${p.event.title}」への参加を受け付けました。`,
+    "",
+    `日時: ${p.when}`,
+    p.shop && `お店: ${p.shop.name}`,
+    p.shop?.address && `住所: ${p.shop.address}`,
+    p.budget && `予算: ${p.budget}`,
+    "",
+    p.shop?.mapUrl && `地図: ${p.shop.mapUrl}`,
+    `カレンダー: ${p.icsUrl}`,
+    `会のページ: ${p.event.url}`,
+  ]);
+  return { subject, html, text };
+}
+
+/** 4b) Someone who was going switched to "今回は見送る". */
+export function attendCancelMail(p: Decided) {
+  const subject = `【参加取消】${p.event.title} — ${p.when}`;
+  const html = layout({
+    brand: p.brand,
+    eyebrow: "Cancelled",
+    title: "参加を取り消しました。<br>また次の会で、乾杯しましょう。",
+    lead: `${esc(p.name)} さん、ご連絡ありがとうございます。<br>参加メンバーから外しました。当日のお知らせメールも届きません。`,
+    rows: decidedRows(p),
+    buttons: [{ label: "やっぱり参加する", href: p.event.url }],
+    tips: ["気が変わったら、会のページからもう一度「参加する」を押せばOK。"],
+    ps: "※ 心当たりがない場合は、幹事までお知らせください。",
+    zh: `【中文】已取消参加。如果改变主意，可以在聚会页面重新点「参加」。`,
+    footerUrl: p.site,
+  });
+  const text = plain([
+    `${p.name} さん`,
+    `「${p.event.title}」への参加を取り消しました。`,
+    "",
+    `日時: ${p.when}`,
+    p.shop && `お店: ${p.shop.name}`,
+    "",
+    `もう一度参加する: ${p.event.url}`,
+  ]);
+  return { subject, html, text };
+}

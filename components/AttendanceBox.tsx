@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Check } from "lucide-react";
 import { dictionaries, type Lang } from "@/lib/i18n";
 import { setAttendance } from "@/app/e/[slug]/actions";
+import { ATTEND_LIMIT } from "@/lib/types";
 import Avatar from "./Avatar";
 
 /** Who's going to a decided party, plus join / decline for the signed-in member. */
@@ -34,8 +35,10 @@ export default function AttendanceBox({
   const set = (going: boolean) =>
     start(async () => {
       const r = await setAttendance(eventId, slug, going);
-      if (r.ok) router.refresh();
-      else setError(r.error);
+      if (r.ok) {
+        setError("");
+        router.refresh();
+      } else setError(r.error === ATTEND_LIMIT ? t.attendLimit : r.error);
     });
 
   return (

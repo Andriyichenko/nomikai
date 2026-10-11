@@ -228,7 +228,7 @@ function ComboMatrix({
   return (
     <div>
       <p className="mb-3 text-xs text-muted">{t.comboHint}</p>
-      <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+      <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 md:mx-0 md:px-0">
         <table className="w-full border-separate border-spacing-1 text-center text-xs">
           <thead>
             <tr>

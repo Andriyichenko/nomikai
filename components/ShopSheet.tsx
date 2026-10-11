@@ -77,7 +77,7 @@ export default function ShopSheet({
             {(shop.photos ?? []).length > 0 && (
               <section className="mt-6">
                 <h3 className="eyebrow mb-3">Photos — {t.photos}</h3>
-                <div className="-mx-5 flex snap-x gap-2 overflow-x-auto px-5 pb-1 md:-mx-8 md:px-8">
+                <div className="-mx-5 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-5 pb-1 md:-mx-8 md:px-8">
                   {shop.photos.map((src, i) => (
                     <a
                       key={src}

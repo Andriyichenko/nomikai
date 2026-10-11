@@ -98,3 +98,6 @@ export type ArchiveEntry = {
   images: string[];
   position: number;
 };
+
+/** Error code from setAttendance when the daily join/decline cap (attendees_limit_changes trigger) is hit. */
+export const ATTEND_LIMIT = "attend_limit";
