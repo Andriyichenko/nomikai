@@ -1,111 +1,97 @@
-# Nomikai 利用ガイド / 使い方（ユーザー・管理者）
+# Nomikai v2 — 飲み会の「お店 × 日程」投票サイト
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)](#)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](#)
-[![NextAuth](https://img.shields.io/badge/NextAuth.js-Auth-000000?logo=auth0&logoColor=white)](#)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)](#)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwindcss&logoColor=white)](#)
+お店の候補と日程の候補を並べて、メンバーが「行きたいお店」と「行ける日」を選ぶだけ。管理者は票を見て決定し、回答者にメールで通知します。日本語 / 中文 対応。
 
 ---
 
-## 目次
-- [1. サービス概要](#1-サービス概要)
-- [2. 言語切り替え（URL）](#2-言語切り替えurl)
-- [3. ログイン](#3-ログイン)
-- [4. 予約（参加可能日を選択）](#4-予約参加可能日を選択)
-- [5. 自分の予約を確認・変更・キャンセル](#5-自分の予約を確認変更キャンセル)
-- [6. 管理者（/admin）](#6-管理者admin)
-- [7. よくあるトラブル](#7-よくあるトラブル)
-- [8. 開発者向け（ローカル起動）](#8-開発者向けローカル起動)
-- [9. セキュリティ注意](#9-セキュリティ注意)
+## メンバーの使い方
+
+1. トップの「いま募集中」から会を開く
+2. **01 行きたいお店** — カードの「詳細」でメニュー・口コミ・地図を確認し、「選ぶ」（いくつでも）
+3. **02 行ける日** — 参加できる日をタップ（いくつでも）
+4. **03 ひとこと** — アレルギーや遅刻など（任意）
+5. 画面下の **「回答を送る」**。初回だけ Google かメールのリンクでログイン（パスワード不要）。選んだ内容はログイン後もそのまま残ります。
+
+締切までは何度でも変更・取り消しできます。決定すると会のページに日時とお店が表示され、カレンダーに追加できます。
+
+## 管理者の使い方（/admin）
+
+| タブ | できること |
+|---|---|
+| 会 | 会の作成・編集。候補のお店（並び順）、候補日（期間＋曜日でまとめて追加 → カレンダーで微調整）、締切、公開状態。回答一覧と「決定する」パネル |
+| お店 | **食べログ / ホットペッパーのリンクを貼るだけで自動入力**（店名・写真・ロゴ・住所・アクセス・営業時間・予算・評価・口コミ・メニュー/コース）。取り込み後に内容を確認・修正して保存 |
+| 標語・お知らせ | 開屏（スプラッシュ）とトップの標語。文字だけ入力すれば同じデザインで表示。複数を「表示中」にすると訪問ごとに切り替え |
+| メンバー | 表示名の修正、管理者権限の付け外し |
+| アーカイブ | 過去の会の写真と記録 |
+
+> 取り込みは「お店のページ」のURLに対応しています（例: `https://tabelog.com/osaka/A2701/A270101/27125083/`、`https://www.hotpepper.jp/strJ001100031/`）。スマホの共有ボタンでコピーした文章を丸ごと貼っても動きます。口コミは短い抜粋＋掲載元へのリンクとして保存します。
 
 ---
 
-## 1. サービス概要
-Nomikai は、日/中（日本語・中国語）対応のイベント予約サイトです。ログイン後、カレンダーから参加可能日を複数選択して予約できます。管理者はイベント・お知らせ・予約集計を管理できます。
-
----
-
-## 2. 言語切り替え（URL）
-本プロジェクトは **パスプレフィックス**で言語を切り替えます。
-
-- **日本語（デフォルト）**：`/`
-- **中文（简体）**：`/cn`
-
-例：
-- トップ（日本語）：`http://localhost:3000/`
-- トップ（中文）：`http://localhost:3000/cn`
-
----
-
-## 3. ログイン
-画面のログイン導線から認証します（UIはページにより異なる場合があります）。
-
-対応：
-- Google OAuth
-- メール/パスワード
-- メールOTP（ワンタイムコード / マジックリンク系フロー）
-
----
-
-## 4. 予約（参加可能日を選択）
-1. 予約ページへ移動（通常 `/reserve`）
-2. カレンダーで **参加可能日を選択（複数可）**
-3. 必要に応じてメッセージ（備考）を入力
-4. 送信して予約完了
-
-予約日は `YYYY-MM-DD` 形式で保存されます。
-
----
-
-## 5. 自分の予約を確認・変更・キャンセル
-予約ページ（または「マイ予約」相当）で以下が可能です。
-
-- **確認**：現在の選択日・メッセージの閲覧
-- **変更**：日付/メッセージを更新して保存
-- **キャンセル**：予約を削除
-
-### 表示名（ユーザー名）について
-ユーザー名を変更した場合、予約の表示名は **常に現在のユーザー名で表示**されます（同一ユーザーが新旧2つの名前で表示されない想定）。
-
----
-
-## 6. 管理者（/admin）
-管理者ページ：`/admin`
-
-主な機能（実装状況により表示は異なる場合があります）：
-- イベント管理（作成/編集/削除、画像など）
-- お知らせ（Notice）管理
-- 予約の集計・可視化（グラフ/一覧）
-  - 日付別・ユーザー別の確認（ダッシュボードのUIに依存）
-
-管理者権限がない場合、アクセスは拒否/制限されます。
-
----
-
-## 7. よくあるトラブル
-- **ページが読み込めない**：リロード → ログイン状態を確認 → `/cn` の有無（言語）を確認
-- **予約が保存されない**：送信ボタン押下後の通知を確認。未ログインなら先にログイン
-- **OTPが届かない**：迷惑メール確認。メール設定（SMTP）が正しいか管理者が確認
-
----
-
-## 8. 開発者向け（ローカル起動）
-前提：Node.js / npm
+## 開発
 
 ```bash
 npm install
-npx prisma generate
-npx prisma db push
-npm run dev
+cp .env.example .env.local   # Supabase の URL と anon key を設定
+npm run dev                  # http://localhost:3000
+npm run typecheck && npm run lint && npm run build
 ```
 
-- 起動後：`http://localhost:3000`
-- DB確認：`npx prisma studio`
+### Supabase のセットアップ（初回のみ）
 
----
+プロジェクト: `https://mqoopfdnnclhzfztdcid.supabase.co`（ダッシュボード: https://supabase.com/dashboard/project/mqoopfdnnclhzfztdcid ）
 
-## 9. セキュリティ注意
-- `.env` には DB/認証/SMTP 等の秘匿情報が含まれます。
-- `.env` を Git にコミットしないでください。
-- 画面共有/チャット貼り付け時は値を必ずマスクしてください。
+**1. スキーマ** — SQL Editor で `supabase/migrations/` のファイルを**日付順に**実行:
+`20261011000000_init.sql`（済）→ `20261012000000_free_dates.sql`（日程の自由選択）→ `20261013000000_attendees.sql`（参加者・お知らせメール）
+
+**2. 旧データの取り込み** — SQL Editor で `supabase/legacy-import.sql` を実行。
+メンバー・過去の回答・アーカイブ・標語・お知らせが入り、`.env` の `ADMIN_EMAIL` のメンバーが管理者になります。
+このファイルにはメールアドレスが含まれるため Git には入りません（`.gitignore` 済）。何度実行しても重複しません。
+
+**3. Google ログイン**
+- Google Cloud Console → APIs & Services → Credentials → 旧システムで使っていた OAuth クライアント（`.env` の `GOOGLE_CLIENT_ID`）を開き、
+  「承認済みのリダイレクト URI」に `https://mqoopfdnnclhzfztdcid.supabase.co/auth/v1/callback` を追加
+- Supabase → Authentication → Sign In / Providers → **Google** を ON にし、Client ID と Client Secret（`.env` の `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`）を貼り付け
+
+**4. URL 設定** — Authentication → URL Configuration
+- Site URL: 本番のURL（例 `https://nomikai.example.com`。未公開の間は `http://localhost:3000`）
+- Redirect URLs に追加: `http://localhost:3000/**` と `https://<本番ドメイン>/**`
+
+**5. メールログインの設定**
+- Authentication → Emails → **SMTP Settings** で Custom SMTP を ON（標準の送信は1時間に数通までしか送れません）
+  - Host `smtp.gmail.com` / Port `587` / Username・Password は `.env` の `EMAIL_SERVER_USER`・`EMAIL_SERVER_PASSWORD`（Gmail のアプリパスワード）/ Sender は `EMAIL_FROM`
+- Authentication → Emails → **Templates** で次の2つを設定（スマホのメールアプリ内ブラウザで開いてもログインできるリンク形式になっています）
+
+  | テンプレート | Subject | Body（ファイルの中身を丸ごと貼り付け） |
+  |---|---|---|
+  | Magic Link | `【バース人材】ログインリンク — 乾杯まであと1クリック` | `supabase/templates/magic-link.html` |
+  | Confirm signup | `【バース人材】ようこそ！登録まであと1クリック` | `supabase/templates/confirm-signup.html` |
+
+  文面を変えたいときは `supabase/templates/_base.py` を編集して `python3 supabase/templates/_base.py` で2つを再生成します（デザインは共通）。
+
+**6. 最初の管理者** — 手順2を実行していれば、`ADMIN_EMAIL` のアドレスでログインするだけで「管理」メニューが出ます。
+旧データを使わない場合は、一度ログインしてから SQL Editor で:
+
+```sql
+update public.profiles set is_admin = true where email = 'you@example.com';
+```
+
+**7. 環境変数** — ローカルは `.env.local`（`.env.example` 参照）。ホスティング先（Vercel / Amplify など）にも同じ値を設定し、
+`NEXT_PUBLIC_SITE_URL` は本番URLにします。
+
+**8. お知らせメール** — `.env.local`（本番も同じ）に `SUPABASE_SERVICE_ROLE_KEY`・`EMAIL_LINK_SECRET`・`CRON_SECRET` を設定（`.env.example` 参照）。
+- 回答したとき → 本人に「回答受付」メール
+- 管理画面で「決定」→ その日に◯をつけた人へ「決定」メール（自動で参加者に登録）、それ以外の回答者へ「お誘い」メール（ボタンひとつで参加／見送り、ログイン不要）
+- 当日の朝 8:00 → 参加者へ「本日」メール。`.github/workflows/day-of-reminder.yml` が `/api/cron/day-of` を呼びます。GitHub の Secrets に `SITE_URL`（公開URL）と `CRON_SECRET` を登録してください
+- 手動で確認: `curl -H "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/cron/day-of?dry=1"`（送信せずに対象だけ表示）
+
+**9. 自動停止の防止** — 無料プランは7日間アクセスがないと一時停止します。`.github/workflows/supabase-keepalive.yml` が毎日 9:17（JST）に1回データベースへ問い合わせます。
+- GitHub → リポジトリ → Settings → Secrets and variables → Actions に
+  `SUPABASE_URL`（`https://mqoopfdnnclhzfztdcid.supabase.co`）と `SUPABASE_ANON_KEY`（`.env.local` の `NEXT_PUBLIC_SUPABASE_ANON_KEY`）を登録
+- スケジュール実行は **デフォルトブランチ（main）にあるワークフローだけ** が動きます。マージ後、Actions タブから「Run workflow」で一度手動実行して成功を確認
+- 失敗するとGitHubからメールが届きます（多くはプロジェクトが既に停止している状態 → ダッシュボードで Restore）
+- GitHub はリポジトリに60日間コミットがないとスケジュール実行を止めます。止まった場合は Actions タブで再度有効化してください
+
+### 旧システム（v1）からのデータ移行（参考）
+
+`scripts/legacy-to-sql.mjs` が v1 のエクスポートJSON（`scripts/export-legacy.mjs`）を v2 用のSQLに変換します。旧メンバーは同じメールアドレスでログインすると、過去の回答ごと自動で引き継がれます。

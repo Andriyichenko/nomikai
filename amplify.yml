@@ -1,0 +1,22 @@
+# AWS Amplify Hosting (Next.js SSR). Pushing to the connected GitHub branch triggers this build.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install 20 && nvm use 20
+        - npm ci
+    build:
+      commands:
+        # Amplify only exposes console env vars at build time; write the ones the server needs at
+        # runtime into .env.production so SSR routes / server actions can read them.
+        - env | grep -E '^(NEXT_PUBLIC_[A-Z_]+|SUPABASE_SERVICE_ROLE_KEY|EMAIL_SERVER_[A-Z]+|EMAIL_FROM|EMAIL_LINK_SECRET|CRON_SECRET)=' >> .env.production
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - .next/cache/**/*
+      - node_modules/**/*

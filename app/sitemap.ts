@@ -1,26 +1,12 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
+import { getPublicEvents } from "@/lib/data";
 
-export const dynamic = "force-static";
- 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const events = await getPublicEvents();
   return [
-    {
-      url: 'https://example.com',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 1,
-    },
-    {
-      url: 'https://example.com/cn',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://example.com/reserve',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-  ]
+    { url: `${site}/` },
+    { url: `${site}/archive` },
+    ...events.map((e) => ({ url: `${site}/e/${e.slug}`, lastModified: e.created_at })),
+  ];
 }
