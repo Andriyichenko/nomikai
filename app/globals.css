@@ -319,10 +319,7 @@ html.splash-seen .splash {
   animation: ninja-land 0.7s cubic-bezier(0.3, 1.2, 0.5, 1) both;
   animation-delay: calc(var(--splash-wait, 0s) + 0.15s);
 }
-/* on a first visit the splash plays first, so the hero entrance waits for it */
-html:not(.splash-seen) .hero-zone {
-  --splash-wait: 3.5s;
-}
+
 @keyframes vanish {
   to { transform: scale(0.2) translateY(20px); opacity: 0; }
 }
@@ -338,3 +335,26 @@ html:not(.splash-seen) .hero-zone {
   .puff, .ninja-land, .menu-in { animation: none; }
   .puff { display: none; }
 }
+
+/* ---------------------------------------------------------------------------
+ * Splash v2 — "日の丸" iris: stamp → mascot lands → seal floods → shutter opens
+ * ------------------------------------------------------------------------- */
+@keyframes seal-stamp {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes seal-flood {
+  to { transform: scale(9); }
+}
+@keyframes ring-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+/* On a first visit the splash already shows the landing, so the hero just stands there. */
+html:not(.splash-seen) .hero-zone .ninja-land { animation: none; }
+html:not(.splash-seen) .hero-zone .puff { display: none; }
+

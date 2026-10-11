@@ -14,9 +14,9 @@ export default async function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
         <Link href="/" className="group flex items-center gap-3">
           <Image src="/mark.png" alt="" width={35} height={28} priority />
-          <span className="flex items-baseline gap-2 font-serif text-[15px] font-bold tracking-[0.12em]">
+          <span className="flex items-baseline gap-2 whitespace-nowrap font-serif text-[15px] font-bold tracking-[0.12em]">
             {settings.brand}
-            <span className="font-medium text-muted transition-colors group-hover:text-accent">{settings.brand_sub}</span>
+            <span className="hidden font-medium text-muted transition-colors group-hover:text-accent sm:inline">{settings.brand_sub}</span>
           </span>
         </Link>
 
@@ -35,7 +35,7 @@ export default async function SiteHeader() {
               <Avatar name={profile?.display_name ?? "?"} src={profile?.avatar_url} size={32} />
             </Link>
           ) : (
-            <Link href="/login" className="btn btn-ghost !min-h-9 !px-4 text-xs">
+            <Link href="/login" className="btn btn-ghost !min-h-9 whitespace-nowrap !px-3 text-xs sm:!px-4">
               {t.nav.login}
             </Link>
           )}

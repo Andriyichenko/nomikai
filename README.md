@@ -66,6 +66,9 @@ npm run typecheck && npm run lint && npm run build
   |---|---|---|
   | Magic Link | `【バース人材】ログインリンク — 乾杯まであと1クリック` | `supabase/templates/magic-link.html` |
   | Confirm signup | `【バース人材】ようこそ！登録まであと1クリック` | `supabase/templates/confirm-signup.html` |
+  | Reset Password | `【バース人材】パスワードの再設定` | `supabase/templates/reset-password.html` |
+
+- Authentication → Sign In / Providers → **Email** が ON（パスワード登録とメールのリンク、どちらも使えます）。「Confirm email」も ON 推奨（登録時に確認メールが届きます）
 
   文面を変えたいときは `supabase/templates/_base.py` を編集して `python3 supabase/templates/_base.py` で2つを再生成します（デザインは共通）。
 

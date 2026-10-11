@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyAttend } from "@/lib/links";
+import { publicOrigin, verifyAttend } from "@/lib/links";
 import { todayJST } from "@/lib/format";
 
 /**
@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const profileId = url.searchParams.get("p") ?? "";
   const action = url.searchParams.get("a") ?? "";
   const token = url.searchParams.get("t") ?? "";
-  const back = (state: string) => NextResponse.redirect(new URL(`/e/${slug}?attend=${state}`, url.origin), 303);
+  const back = (state: string) => NextResponse.redirect(`${publicOrigin(request)}/e/${slug}?attend=${state}`, 303);
 
   if (!["yes", "no"].includes(action)) return back("invalid");
   const db = createAdminClient();

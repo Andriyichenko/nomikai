@@ -38,13 +38,13 @@ export default async function Home() {
     <>
       <Splash line={line} caption={caption} brand={settings.brand} />
 
-      <section className="mx-auto grid max-w-6xl items-end gap-6 px-4 pb-12 pt-12 md:grid-cols-[1fr_20rem] md:gap-10 md:px-8 md:pb-16 md:pt-16 lg:grid-cols-[1fr_24rem]">
+      <section className="mx-auto grid max-w-6xl items-end gap-6 px-4 pb-8 pt-8 md:grid-cols-[1fr_20rem] md:gap-10 md:px-8 md:pb-16 md:pt-16 lg:grid-cols-[1fr_24rem]">
         <div className="pb-2 md:pb-10">
           {!isSupabaseConfigured && <SetupNotice />}
           <div className="rise">
             <Tagline line={line} caption={caption} size="hero" />
           </div>
-          <div className="rise mt-8 flex items-end justify-between gap-4 md:mt-10" style={{ animationDelay: "0.15s" }}>
+          <div className="rise mt-4 flex items-end justify-between gap-3 md:mt-10" style={{ animationDelay: "0.15s" }}>
             {open[0] ? (
               <Link href={`/e/${open[0].slug}`} className="btn btn-primary">
                 {open[0].title} →
@@ -52,7 +52,8 @@ export default async function Home() {
             ) : (
               <span />
             )}
-            <HeroMascot size="sm" className="-mb-2 w-32 shrink-0 md:hidden" />
+            {/* phone: smaller and pulled up beside the caption so the row doesn't leave a gap */}
+            <HeroMascot size="sm" className="-mb-1 -mt-11 w-28 shrink-0 md:hidden" />
           </div>
         </div>
         <HeroMascot className="rise hidden md:block" />

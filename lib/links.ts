@@ -24,3 +24,15 @@ export function verifyAttend(eventId: string, profileId: string, action: string,
 }
 
 export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
+/**
+ * Public origin for redirects. Behind AWS Amplify / CloudFront `request.url` is the internal
+ * `localhost:3000`, so prefer the configured site URL, then the forwarded host.
+ */
+export function publicOrigin(request: Request) {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured && !configured.includes("localhost")) return configured.replace(/\/$/, "");
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
+}

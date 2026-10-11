@@ -1,23 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Tagline from "./Tagline";
 import Smoke from "./Smoke";
 
 const KEY = "nomikai:splash";
-const LEAVE_AT = 3500;
+const IRIS_AT = 2950; // seal has flooded the screen by now
+const IRIS_MS = 650;
 
 /**
- * Opening sequence, once per browser session (tap anywhere to skip):
- *   1. the brand glitches in, in the mascot poster's crimson double-offset lettering
- *   2. the slogan rises (same <Tagline> style as everywhere else)
- *   3. the mascot pushes his pallet jack along the bottom line — the line he draws is the
- *      progress bar (his poster lettering shouts "集まれ！"), then vanishes ninja-style ("ドロン！") in a puff of smoke.
+ * Opening sequence, once per browser session (tap anywhere to skip). Same composition as the
+ * home hero, so it hands over seamlessly:
+ *   0.1s  the vermilion seal stamps down and an ink ring draws around it
+ *   0.55s the mascot drops into the seal — "ドロン" smoke at his feet
+ *   1.1s  the slogan rises (same <Tagline> style as everywhere else)
+ *   2.5s  the seal floods the screen red, then a shutter opens from its centre onto the page
  * Server-rendered so there is no flash of the page underneath; the inline script hides it
  * before first paint for visitors who have already seen it.
  */
 export default function Splash({ line, caption, brand }: { line: string; caption: string; brand: string }) {
   const [state, setState] = useState<"show" | "leaving" | "gone">("show");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const sealRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     let seen = false;
@@ -29,11 +33,40 @@ export default function Splash({ line, caption, brand }: { line: string; caption
       setState("gone");
       return;
     }
-    const t1 = setTimeout(() => setState("leaving"), LEAVE_AT);
-    const t2 = setTimeout(() => setState("gone"), LEAVE_AT + 600);
+    const root = rootRef.current;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const t = setTimeout(() => setState("gone"), 1800);
+      return () => clearTimeout(t);
+    }
+    // Shutter: a transparent hole grows from the seal's centre (radius driven per frame,
+    // so it works without CSS @property support).
+    let raf = 0;
+    const open = () => {
+      const seal = sealRef.current?.getBoundingClientRect();
+      const cx = seal ? seal.left + seal.width / 2 : window.innerWidth / 2;
+      const cy = seal ? seal.top + seal.height / 2 : window.innerHeight / 2;
+      const max = Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy)) + 20;
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / IRIS_MS);
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const r = e * max;
+        const mask = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${r}px, #000 ${r + 1}px)`;
+        if (root) {
+          root.style.maskImage = mask;
+          root.style.webkitMaskImage = mask;
+        }
+        if (t < 1) raf = requestAnimationFrame(step);
+        else setState("gone");
+      };
+      raf = requestAnimationFrame(step);
+    };
+    const t = setTimeout(open, IRIS_AT);
+    const safety = setTimeout(() => setState("gone"), IRIS_AT + IRIS_MS + 400); // if rAF is throttled
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(t);
+      clearTimeout(safety);
+      cancelAnimationFrame(raf);
     };
   }, []);
 
@@ -47,59 +80,63 @@ export default function Splash({ line, caption, brand }: { line: string; caption
         }}
       />
       <div
+        ref={rootRef}
         role="presentation"
         onClick={() => {
           setState("leaving");
-          setTimeout(() => setState("gone"), 500);
+          setTimeout(() => setState("gone"), 350);
         }}
-        className="splash fixed inset-0 z-[100] flex flex-col justify-between overflow-hidden bg-paper px-6 pb-10 pt-8 transition-opacity duration-500 md:px-16 md:pb-14 md:pt-12"
+        className="splash fixed inset-0 z-[100] overflow-hidden bg-paper transition-opacity duration-300"
         style={{ opacity: state === "leaving" ? 0 : 1 }}
       >
-        <p className="glitch glitch-in text-2xl md:text-4xl">{brand}</p>
+        <p className="eyebrow fade-in absolute left-6 top-7 md:left-16 md:top-10">{brand}</p>
 
-        <div className="rise" style={{ animationDelay: "0.45s", animationDuration: "1.1s" }}>
-          <Tagline line={line} caption={caption} size="splash" />
-        </div>
-
-        {/* track: the ink line grows to the right and the mascot rides its tip */}
-        <div className="relative h-32 md:h-52">
-          <div className="absolute inset-x-0 bottom-0 h-px bg-line" />
+        <div className="mx-auto grid h-full max-w-6xl content-center items-center gap-8 px-6 md:grid-cols-[1fr_22rem] md:gap-10 md:px-8 lg:grid-cols-[1fr_24rem]">
+          {/* slogan — left on desktop, under the seal on phones */}
           <div
-            className="absolute bottom-0 left-0 h-[2px] bg-ink"
-            style={{ animation: "ride-track 2.6s cubic-bezier(0.45, 0.05, 0.4, 1) 0.15s both" }}
+            className="order-2 md:order-1"
+            style={{ animation: "rise 0.9s cubic-bezier(0.2,0.7,0.2,1) 1.1s both, fade-out 0.25s ease 2.45s forwards" }}
           >
-            {/* ninja exit: "ドロン！" — a puff of smoke where he stood */}
-            <div className="absolute bottom-0 right-0 h-28 w-28 translate-x-[35%] md:h-48 md:w-48">
-              <Smoke delay={2.75} scale={1.5} className="top-[40%]" />
+            <Tagline line={line} caption={caption} size="splash" />
+          </div>
+
+          {/* seal + mascot */}
+          <div className="relative order-1 mx-auto aspect-[4/5] w-[min(64vw,19rem)] md:order-2 md:w-full">
+            <span ref={sealRef} className="absolute bottom-[6%] left-1/2 aspect-square w-[88%] -translate-x-1/2">
               <span
-                className="pop glitch absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-lg md:text-2xl"
-                style={{ animationDelay: "2.85s" }}
-              >
-                ドロン！
-              </span>
-            </div>
-            <div
-              className="absolute bottom-0 right-0 translate-x-[35%]"
-              style={{ animation: "vanish 0.3s ease-in 2.75s both" }}
-            >
-              {/* speed lines */}
-              {[0.35, 0.6, 0.82].map((y, i) => (
-                <span
-                  key={i}
-                  aria-hidden
-                  className="speed-line absolute -left-3 h-[2px] w-8 origin-right rounded-full bg-ink/60"
-                  style={{ top: `${y * 100}%`, animationDelay: `${i * 0.12}s` }}
-                />
-              ))}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/mascot-sm-v3.webp"
-                alt=""
-                width={260}
-                height={360}
-                className="ride-bump block h-32 w-auto md:h-52"
+                className="absolute inset-0 rounded-full bg-accent"
+                style={{ animation: "seal-stamp 0.5s cubic-bezier(0.3,1.4,0.5,1) 0.1s both, seal-flood 0.55s cubic-bezier(0.7,0,0.3,1) 2.45s forwards" }}
               />
+            </span>
+            <svg
+              aria-hidden
+              viewBox="0 0 100 100"
+              className="absolute bottom-[6%] left-1/2 aspect-square w-[88%] -translate-x-[46%] translate-y-[3%] overflow-visible"
+              style={{ animation: "fade-out 0.2s ease 2.45s forwards" }}
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="49.5"
+                fill="none"
+                stroke="var(--ink)"
+                strokeOpacity="0.7"
+                strokeWidth="0.6"
+                pathLength={1}
+                strokeDasharray="1"
+                style={{ animation: "ring-draw 0.9s cubic-bezier(0.6,0,0.3,1) 0.3s both", transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
+              />
+            </svg>
+            <div
+              className="absolute inset-x-[4%] bottom-[4%] top-0"
+              style={{ animation: "ninja-land 0.7s cubic-bezier(0.3,1.2,0.5,1) 0.55s both, fade-out 0.2s ease 2.45s forwards" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/mascot-nosig-v3.webp" alt="" width={546} height={800} className="h-full w-full object-contain object-bottom" />
             </div>
+            <span className="absolute inset-0" style={{ animation: "fade-out 0.2s ease 2.45s forwards" }}>
+              <Smoke delay={0.95} scale={1.4} className="top-[58%]" />
+            </span>
           </div>
         </div>
       </div>

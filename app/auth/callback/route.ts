@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { publicOrigin } from "@/lib/links";
 
 /**
  * Lands both sign-in flows:
@@ -9,7 +10,8 @@ import { createClient } from "@/lib/supabase/server";
  *   token hash works even when the mail is opened in a different browser or a mail app's webview.
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = publicOrigin(request);
   const nextParam = searchParams.get("next") ?? "/";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
   const supabase = await createClient();

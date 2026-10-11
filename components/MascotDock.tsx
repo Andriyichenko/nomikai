@@ -1,7 +1,7 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- the flying sprite is positioned per frame; next/image adds nothing here */
-import { useCallback, useEffect, useRef, useState } from "react";
+/* eslint-disable @next/next/no-img-element -- tiny fixed sprite; next/image adds nothing here */
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -17,18 +17,15 @@ export type DockEvent = {
   shops: { id: string; name: string; cover_url: string | null }[];
 };
 
-const SCROLL_RANGE = 380; // px of scrolling over which the hero mascot shrinks into the dock
-const DOCK = { right: 12, bottom: 16, w: 72, h: 100 }; // mascot box when docked
+const DOCK = { right: 12, bottom: 16, w: 72, h: 100 }; // mascot box in the corner
 const EVENT_PAGE_LIFT = 76; // clear the sticky submit bar on /e/*
-
-type Rect = { x: number; y: number; w: number; h: number };
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const HEADER = 64;
 
 /**
- * The mascot follows you around. On the home page he lifts out of the hero and shrinks into
- * the bottom-right corner as you scroll (with ninja after-images, and a "ドロン" puff on
- * arrival); everywhere else he simply waits there. Tap him for a small ninja menu.
+ * The mascot follows you around. On the home page he only appears in the bottom-right corner
+ * once the big hero mascot has scrolled completely out of view — dropping in with a "ドロン"
+ * puff — and vanishes again when the hero comes back. Everywhere else he simply waits there.
+ * Tap him for a small ninja menu.
  */
 export default function MascotDock({ lang, events, loggedIn }: { lang: Lang; events: DockEvent[]; loggedIn: boolean }) {
   const t = dictionaries[lang].dock;
@@ -37,103 +34,36 @@ export default function MascotDock({ lang, events, loggedIn }: { lang: Lang; eve
   const hidden = path.startsWith("/admin");
   const lift = path.startsWith("/e/") ? EVENT_PAGE_LIFT : 0;
 
-  const flyRef = useRef<HTMLDivElement>(null);
-  const ghostRefs = [useRef<HTMLImageElement>(null), useRef<HTMLImageElement>(null)];
-  const heroRef = useRef<HTMLElement | null>(null);
-  const ghostP = useRef([1, 1]);
-  const raf = useRef(0);
-  const [docked, setDocked] = useState(true);
-  const [poof, setPoof] = useState(0);
+  const [docked, setDocked] = useState(false);
+  const [entry, setEntry] = useState(0); // bumps on every appearance to replay the drop + smoke
   const [open, setOpen] = useState(false);
   const [hop, setHop] = useState(0);
-  const reduced = useRef(false);
 
-  const dockRect = useCallback((): Rect => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    return { x: vw - DOCK.right - DOCK.w - 6, y: vh - DOCK.bottom - lift - DOCK.h - 10, w: DOCK.w, h: DOCK.h };
-  }, [lift]);
-
-  const place = (el: HTMLElement | null, r: Rect) => {
-    if (!el) return;
-    el.style.transform = `translate3d(${r.x}px, ${r.y}px, 0)`;
-    el.style.width = `${r.w}px`;
-    el.style.height = `${r.h}px`;
-  };
-
-  // Main loop: map scroll position → progress → interpolated rect between hero and dock.
   useEffect(() => {
     if (hidden) return;
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const heroes = [...document.querySelectorAll<HTMLElement>("[data-mascot-hero]")];
-    heroRef.current = heroes.find((h) => h.getBoundingClientRect().width > 0) ?? null;
-    let wasDocked = !heroRef.current || window.scrollY >= SCROLL_RANGE;
-    setDocked(wasDocked);
-
-    const frame = () => {
-      const hero = heroRef.current;
-      const p = hero ? Math.min(1, Math.max(0, window.scrollY / SCROLL_RANGE)) : 1;
-      const d = dockRect();
-      const rectAt = (q: number): Rect => {
-        if (!hero || q >= 1) return d;
-        const h = hero.getBoundingClientRect();
-        const e = ease(q);
-        return { x: lerp(h.left, d.x, e), y: lerp(h.top, d.y, e), w: lerp(h.width, d.w, e), h: lerp(h.height, d.h, e) };
-      };
-      place(flyRef.current, rectAt(p));
-      if (hero) hero.style.visibility = p > 0 ? "hidden" : "";
-      if (flyRef.current) flyRef.current.style.visibility = hero && p <= 0 ? "hidden" : "";
-
-      // after-images trail behind while moving
-      let moving = false;
-      ghostRefs.forEach((g, i) => {
-        const k = i === 0 ? 0.28 : 0.14;
-        ghostP.current[i] += (p - ghostP.current[i]) * k;
-        if (Math.abs(p - ghostP.current[i]) < 0.002) ghostP.current[i] = p;
-        else moving = true;
-        const el = g.current;
-        if (!el) return;
-        // only while he is visibly shrinking, and faint — a hint of motion, not a second mascot
-        const show = !reduced.current && hero && Math.abs(p - ghostP.current[i]) > 0.02 && p > 0.12 && p < 1;
-        el.style.opacity = show ? (i === 0 ? "0.22" : "0.1") : "0";
-        place(el, rectAt(ghostP.current[i]));
-      });
-
-      const isDocked = p >= 1;
-      if (isDocked !== wasDocked) {
-        wasDocked = isDocked;
-        setDocked(isDocked);
-        if (isDocked) setPoof((n) => n + 1);
-        if (!isDocked) setOpen(false);
-      }
-      // follow-up frames only animate the after-images catching up
-      raf.current = moving ? requestAnimationFrame(frame) : 0;
+    const hero = [...document.querySelectorAll<HTMLElement>("[data-mascot-hero]")].find((h) => h.getBoundingClientRect().width > 0);
+    let current: boolean | null = null;
+    const check = () => {
+      // docked when there is no hero, or the hero is entirely above the header
+      const show = !hero || hero.getBoundingClientRect().bottom <= HEADER;
+      if (show === current) return;
+      current = show;
+      setDocked(show);
+      if (show) setEntry((n) => n + 1);
+      else setOpen(false);
     };
-    // Scroll events already arrive at most once per frame, so position synchronously; a pending
-    // follow-up frame is replaced rather than waited on (rAF can be throttled in iframes/background).
-    const kick = () => {
-      cancelAnimationFrame(raf.current);
-      raf.current = 0;
-      frame();
-    };
-    ghostP.current = [window.scrollY / SCROLL_RANGE, window.scrollY / SCROLL_RANGE].map((v) => Math.min(1, Math.max(0, heroRef.current ? v : 1)));
-    kick();
-    window.addEventListener("scroll", kick, { passive: true });
-    window.addEventListener("resize", kick);
-    // the hero lands with a CSS animation; keep the sprite in sync while it settles
-    const settle = setInterval(kick, 250);
-    const stop = setTimeout(() => clearInterval(settle), 5000);
+    check();
+    // Visibility of the hero drives it; the scroll listener is only a fallback.
+    const io = hero ? new IntersectionObserver(check, { rootMargin: `-${HEADER}px 0px 0px 0px`, threshold: 0 }) : null;
+    if (hero && io) io.observe(hero);
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
     return () => {
-      window.removeEventListener("scroll", kick);
-      window.removeEventListener("resize", kick);
-      clearInterval(settle);
-      clearTimeout(stop);
-      cancelAnimationFrame(raf.current);
-      raf.current = 0;
-      if (heroRef.current) heroRef.current.style.visibility = "";
+      io?.disconnect();
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run per page
-  }, [path, hidden, dockRect]);
+  }, [path, hidden]);
 
   useEffect(() => {
     if (!open) return;
@@ -151,45 +81,45 @@ export default function MascotDock({ lang, events, loggedIn }: { lang: Lang; eve
 
   return (
     <>
-      {/* seal under the docked mascot */}
-      <span
-        aria-hidden
-        className={clsx(
-          "pointer-events-none fixed z-40 h-14 w-14 rounded-full bg-accent shadow-soft transition-all duration-300",
-          docked ? "scale-100 opacity-100" : "scale-50 opacity-0",
-        )}
-        style={{ right: DOCK.right, bottom: DOCK.bottom + lift }}
-      />
-
-      {ghostRefs.map((g, i) => (
-        <img
-          key={i}
-          ref={g}
-          src="/mascot-sm-v3.webp"
-          alt=""
-          aria-hidden
-          className="pointer-events-none fixed left-0 top-0 z-40 object-contain object-bottom opacity-0 blur-[2px]"
+      <div
+        className={clsx("fixed z-40 transition-opacity duration-200", docked ? "opacity-100" : "pointer-events-none opacity-0")}
+        style={{ right: DOCK.right, bottom: DOCK.bottom + lift, width: DOCK.w + 8, height: DOCK.h + 8 }}
+        aria-hidden={!docked}
+      >
+        {/* seal */}
+        <span
+          className={clsx(
+            "absolute bottom-0 right-1 h-14 w-14 rounded-full bg-accent shadow-soft transition-transform duration-300",
+            docked ? "scale-100" : "scale-0",
+          )}
         />
-      ))}
-
-      <div ref={flyRef} className="fixed left-0 top-0 z-40 will-change-transform" style={{ width: 0, height: 0 }}>
         <button
           type="button"
           aria-label={t.hello}
           aria-expanded={open}
+          tabIndex={docked ? 0 : -1}
           onClick={() => {
             setOpen((o) => !o);
             setHop((n) => n + 1);
           }}
-          className={clsx("relative block h-full w-full", !docked && "pointer-events-none")}
+          className="absolute bottom-2 right-0 block"
+          style={{ width: DOCK.w, height: DOCK.h }}
         >
-          <img
-            key={`img-${hop}`}
-            src={docked ? "/mascot-sm-v3.webp" : "/mascot-v3.webp"}
-            alt=""
-            className={clsx("h-full w-full object-contain object-bottom drop-shadow-[0_6px_10px_rgba(23,22,20,0.25)]", hop > 0 && "pop")}
-          />
-          {docked && <span key={`smoke-${poof}`} className="absolute inset-0"><Smoke scale={0.7} className="top-[30%]" /></span>}
+          {docked && (
+            <span key={`in-${entry}`} className="ninja-land absolute inset-0 block">
+              <img
+                key={`img-${hop}`}
+                src="/mascot-sm-v3.webp"
+                alt=""
+                className={clsx("h-full w-full object-contain object-bottom drop-shadow-[0_6px_10px_rgba(23,22,20,0.25)]", hop > 0 && "pop")}
+              />
+            </span>
+          )}
+          {docked && (
+            <span key={`smoke-${entry}`} className="absolute inset-0">
+              <Smoke delay={0.35} scale={0.7} className="top-[40%]" />
+            </span>
+          )}
         </button>
       </div>
 
