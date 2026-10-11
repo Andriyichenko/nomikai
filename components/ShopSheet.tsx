@@ -74,6 +74,27 @@ export default function ShopSheet({
 
             {shop.summary && <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-ink-2">{shop.summary}</p>}
 
+            {(shop.photos ?? []).length > 0 && (
+              <section className="mt-6">
+                <h3 className="eyebrow mb-3">Photos — {t.photos}</h3>
+                <div className="-mx-5 flex snap-x gap-2 overflow-x-auto px-5 pb-1 md:-mx-8 md:px-8">
+                  {shop.photos.map((src, i) => (
+                    <a
+                      key={src}
+                      href={src}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="relative aspect-square w-36 shrink-0 snap-start overflow-hidden rounded-xl bg-paper-2 md:w-40"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt={`${shop.name} ${i + 1}`} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition duration-500 hover:scale-105" />
+                    </a>
+                  ))}
+                </div>
+                {shop.source !== "manual" && <p className="mt-1.5 text-[10px] text-muted">© {SOURCE_LABEL[shop.source]}</p>}
+              </section>
+            )}
+
             <dl className="mt-6 divide-y divide-line border-y border-line text-sm">
               {shop.address && (
                 <Row label={t.address}>

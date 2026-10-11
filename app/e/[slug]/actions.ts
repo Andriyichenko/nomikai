@@ -79,13 +79,18 @@ export async function setAttendance(eventId: string, slug: string, going: boolea
   const viewer = await getViewer();
   if (!viewer?.profile) return { ok: false, error: "ログインが必要です" };
   const supabase = await createClient();
-  const { error } = await supabase.from("attendees").upsert({
-    event_id: eventId,
-    profile_id: viewer.profile.id,
-    status: going ? "going" : "declined",
-    source: "page",
-    updated_at: new Date().toISOString(),
-  });
+  // Not an upsert: members may only update status/source/updated_at (column grants), and
+  // ON CONFLICT DO UPDATE would need update rights on the key columns too.
+  const patch = { status: going ? "going" : "declined", source: "page", updated_at: new Date().toISOString() };
+  const { data: existing } = await supabase
+    .from("attendees")
+    .select("status")
+    .eq("event_id", eventId)
+    .eq("profile_id", viewer.profile.id)
+    .maybeSingle();
+  const { error } = existing
+    ? await supabase.from("attendees").update(patch).eq("event_id", eventId).eq("profile_id", viewer.profile.id)
+    : await supabase.from("attendees").insert({ event_id: eventId, profile_id: viewer.profile.id, ...patch });
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/e/${slug}`);
   return { ok: true };

@@ -72,12 +72,20 @@ export default async function Home() {
       )}
 
       <section className="mx-auto mt-16 max-w-6xl px-4 md:mt-24 md:px-8">
-        <header className="mb-2 flex items-baseline justify-between">
-          <h2 className="font-serif text-xl font-bold tracking-[0.12em] md:text-2xl">
-            {t.home.open}
-            {open.length > 0 && <span className="ml-3 font-display text-lg font-normal text-accent">{t.home.openCount(open.length)}</span>}
-          </h2>
-          <span className="eyebrow">Open call</span>
+        <header className="mb-6 flex items-end justify-between gap-4 md:mb-8">
+          <div>
+            <p className="flex items-center gap-2 font-display text-sm uppercase tracking-[0.35em] text-accent">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+              Open call
+            </p>
+            <h2 className="mt-2 font-serif text-3xl font-bold tracking-[0.12em] md:text-5xl">{t.home.open}</h2>
+          </div>
+          {open.length > 0 && (
+            <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-accent-ink md:h-16 md:w-16">
+              <span className="font-display text-2xl leading-none md:text-3xl">{open.length}</span>
+              <span className="text-[10px] tracking-wider">{t.home.openCount(open.length).replace(/[\d\s]/g, "")}</span>
+            </span>
+          )}
         </header>
         {open.length ? (
           <EventAccordion events={open} respondents={respondents} lang={lang} t={t.event} group="open" />

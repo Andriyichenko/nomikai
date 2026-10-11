@@ -66,6 +66,7 @@ const ShopSchema = z.object({
   review_count: z.number().int().nullable(),
   reviews: z.array(z.object({ author: z.string(), rating: z.number().nullable(), body: z.string(), date: z.string().optional() })).max(20),
   menu: z.array(z.object({ name: z.string(), price: z.string(), note: z.string().optional() })).max(100),
+  photos: z.array(z.string()).max(30),
   source: z.enum(["tabelog", "hotpepper", "manual", "other"]),
   source_url: z.string().nullable(),
 });

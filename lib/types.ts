@@ -19,6 +19,7 @@ export type Shop = {
   review_count: number | null;
   reviews: Review[];
   menu: MenuItem[];
+  photos: string[];
   source: "tabelog" | "hotpepper" | "manual" | "other";
   source_url: string | null;
 };

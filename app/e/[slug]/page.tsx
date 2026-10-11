@@ -7,8 +7,10 @@ import EventFacts from "@/components/EventFacts";
 import ShopLogo from "@/components/ShopLogo";
 import StatusPill, { effectiveStatus } from "@/components/StatusPill";
 import { mapUrl } from "@/lib/shop-utils";
-import { getAttendees, getEventBySlug, getMyAttendance, getMyResponse, getResults, getViewer } from "@/lib/data";
+import { getAttendees, getEventBySlug, getMyAttendance, getMyResponse, getPublicEvents, getResults, getViewer } from "@/lib/data";
 import AttendanceBox from "@/components/AttendanceBox";
+import ShopDetailButton from "@/components/ShopDetailButton";
+import OpenEventsSuggest from "@/components/OpenEventsSuggest";
 import { getDict } from "@/lib/lang";
 import { isPast, longDate, remaining, todayJST } from "@/lib/format";
 
@@ -31,6 +33,9 @@ export default async function EventPage({ params, searchParams }: Params) {
   const [attendees, myAttendance] = isDecided
     ? await Promise.all([getAttendees(event.id), viewer?.profile ? getMyAttendance(event.id, viewer.profile.id) : null])
     : [[], null];
+  const otherOpen = isDecided
+    ? (await getPublicEvents()).filter((e) => e.id !== event.id && effectiveStatus(e.status, e.deadline) === "open")
+    : [];
   const attendState = (await searchParams)?.attend as keyof typeof t.event.attendBanner | undefined;
 
   const status = effectiveStatus(event.status, event.deadline);
@@ -101,6 +106,9 @@ export default async function EventPage({ params, searchParams }: Params) {
                 <CalendarPlus size={16} /> {t.event.addCalendar}
               </a>
               {decidedShop && (
+                <ShopDetailButton shop={decidedShop} lang={lang} className="btn bg-accent text-accent-ink hover:brightness-110" />
+              )}
+              {decidedShop && (
                 <a href={mapUrl(decidedShop)} target="_blank" rel="noreferrer" className="btn border border-paper/30 text-paper hover:border-paper">
                   <MapPin size={16} /> {t.event.map}
                 </a>
@@ -119,24 +127,30 @@ export default async function EventPage({ params, searchParams }: Params) {
         </section>
       )}
 
-      <VoteForm
-        eventId={event.id}
-        slug={event.slug}
-        shops={shops}
-        dates={event.dates}
-        shopCounts={shopCounts}
-        dateCounts={dateCounts}
-        mine={mine}
-        loggedIn={Boolean(viewer?.profile)}
-        isOpen={isOpen}
-        lang={lang}
-      />
+      {isDecided ? (
+        // decided: no more voting — point people at what is still open instead
+        <OpenEventsSuggest events={otherOpen} t={t.event} lang={lang} />
+      ) : (
+        <VoteForm
+          eventId={event.id}
+          slug={event.slug}
+          shops={shops}
+          dates={event.dates}
+          shopCounts={shopCounts}
+          dateCounts={dateCounts}
+          mine={mine}
+          loggedIn={Boolean(viewer?.profile)}
+          isOpen={isOpen}
+          lang={lang}
+        />
+      )}
 
       <ResultsBoard
         people={results?.people ?? []}
         shops={shops.map((s) => ({ id: s.id, name: s.name, logo_url: s.logo_url }))}
         dates={event.dates}
         lang={lang}
+        heading={isDecided ? t.event.tallyHistory : undefined}
       />
     </article>
   );

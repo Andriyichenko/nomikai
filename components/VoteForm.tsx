@@ -80,7 +80,9 @@ export default function VoteForm(props: Props) {
     !sameSet(shops, p.mine.shop_ids) ||
     !sameSet(dates, p.mine.dates) ||
     comment.trim() !== (p.mine.comment ?? "");
-  const canSubmit = p.isOpen && (shops.size > 0 || dates.size > 0) && dirty && !pending;
+  // order matters: shops first, then days (when the event has candidate shops)
+  const needShop = p.shops.length > 0 && shops.size === 0;
+  const canSubmit = p.isOpen && !needShop && dates.size > 0 && dirty && !pending;
 
   const submit = () => {
     if (!p.loggedIn) {
@@ -126,7 +128,7 @@ export default function VoteForm(props: Props) {
   return (
     <div>
       {/* 01 — shops */}
-      <section className="mx-auto max-w-6xl px-4 md:px-8">
+      <section id="step-shops" className="mx-auto max-w-6xl scroll-mt-24 px-4 md:px-8">
         <StepHeader n="01" title={p.t.step1} hint={p.t.step1Hint} count={shops.size} />
         {p.shops.length === 0 ? (
           <p className="py-8 text-ink-2">{p.t.noShops}</p>
@@ -151,23 +153,32 @@ export default function VoteForm(props: Props) {
       {/* 02 — dates */}
       <section className="mx-auto mt-16 max-w-6xl px-4 md:mt-20 md:px-8">
         <StepHeader n="02" title={p.t.step2} hint={p.dates.length ? p.t.step2Hint : p.t.step2HintFree} count={dates.size} />
-        <MonthCalendar
-          candidates={p.dates}
-          selected={dates}
-          counts={p.dateCounts}
-          disabled={!p.isOpen}
-          zh={p.lang === "zh"}
-          t={p.t}
-          onToggle={(d) => toggle(dates, d, setDates, "dates")}
-          onSetMonth={(list, on) => {
-            if (!p.isOpen) return;
-            const next = new Set(dates);
-            list.forEach((d) => (on ? next.add(d) : next.delete(d)));
-            setDates(next);
-            saveDraft({ dates: [...next] });
-            setMessage(null);
-          }}
-        />
+        <div className="relative">
+          <MonthCalendar
+            candidates={p.dates}
+            selected={dates}
+            counts={p.dateCounts}
+            disabled={!p.isOpen || needShop}
+            zh={p.lang === "zh"}
+            t={p.t}
+            onToggle={(d) => toggle(dates, d, setDates, "dates")}
+            onSetMonth={(list, on) => {
+              if (!p.isOpen) return;
+              const next = new Set(dates);
+              list.forEach((d) => (on ? next.add(d) : next.delete(d)));
+              setDates(next);
+              saveDraft({ dates: [...next] });
+              setMessage(null);
+            }}
+          />
+          {needShop && p.isOpen && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-[1.25rem] bg-paper/75 backdrop-blur-[2px]">
+              <a href="#step-shops" className="btn btn-primary shadow-soft">
+                ↑ {p.t.pickShopFirst}
+              </a>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 03 — note */}
@@ -199,7 +210,9 @@ export default function VoteForm(props: Props) {
               {message ? (
                 <span className={message.kind === "ok" ? "text-ok" : "text-accent"}>{message.text}</span>
               ) : (
-                <span className="text-ink-2">{p.t.summary(shops.size, dates.size)}</span>
+                <span className={needShop ? "text-accent" : "text-ink-2"}>
+                  {needShop ? p.t.pickShopFirst : p.t.summary(shops.size, dates.size)}
+                </span>
               )}
             </div>
             <button type="button" onClick={submit} disabled={!canSubmit} className="btn btn-primary shrink-0 px-6">

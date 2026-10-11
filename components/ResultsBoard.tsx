@@ -23,11 +23,13 @@ export default function ResultsBoard({
   shops,
   dates,
   lang,
+  heading,
 }: {
   people: Person[];
   shops: LiteShop[];
   dates: string[];
   lang: Lang;
+  heading?: string;
 }) {
   const t = dictionaries[lang].event;
   const [tab, setTab] = useState<Tab>("combo");
@@ -63,7 +65,7 @@ export default function ResultsBoard({
       <header className="mb-6 flex items-end justify-between gap-4 border-t border-line pt-6">
         <div>
           <p className="eyebrow">Tally</p>
-          <h2 className="mt-1 font-serif text-xl font-bold tracking-[0.1em] md:text-2xl">{t.results}</h2>
+          <h2 className="mt-1 font-serif text-xl font-bold tracking-[0.1em] md:text-2xl">{heading ?? t.results}</h2>
         </div>
         <span className="text-sm text-muted">{t.respondents(n)}</span>
       </header>

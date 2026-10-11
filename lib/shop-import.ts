@@ -14,6 +14,7 @@ const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const MAX_MENU = 40;
 const MAX_REVIEWS = 5;
+const MAX_PHOTOS = 12;
 const REVIEW_CHARS = 180;
 
 type Source = "tabelog" | "hotpepper";
@@ -156,6 +157,11 @@ async function importTabelog(url: string): Promise<ShopDraft> {
   const ld = fromJsonLd(readJsonLd($));
   const info = infoTable($);
 
+  const photos = $(".rstdtl-top-postphoto__photo a[href]")
+    .map((_, a) => $(a).attr("href") ?? "")
+    .get()
+    .filter((u) => /^https:\/\/tblg\.k-img\.com\//.test(u));
+
   const prTitle = oneLine($(".pr-comment-title").first().text());
   const prBody = oneLine($(".pr-comment__first").first().text()).replace(/\s*\.\.\.\s*続きを読む.*$/, "");
   const summary = [prTitle, prBody && prBody !== prTitle ? prBody : ""].filter(Boolean).join("\n");
@@ -178,6 +184,7 @@ async function importTabelog(url: string): Promise<ShopDraft> {
 
   return finalize({
     ...ld,
+    photos,
     source: "tabelog",
     source_url: url,
     summary,
@@ -197,6 +204,7 @@ async function importHotpepper(url: string): Promise<ShopDraft> {
   const info = infoTable($);
 
   const logo = $(".shopHeaderLogo img").attr("src") ?? null;
+  const photos = (html.match(/https:\/\/imgfp\.hotp\.jp\/IMGH\/[^"'\s]+?_480\.jpg/g) ?? []).filter((u) => u !== logo);
   const catchCopy = oneLine($(".shopHeaderGenreCatchInner").first().text());
   const ogDesc = oneLine($('meta[property="og:description"]').attr("content"))
     .replace(/^.*?【ホットペッパーグルメ】！?/, "")
@@ -218,6 +226,7 @@ async function importHotpepper(url: string): Promise<ShopDraft> {
   return finalize({
     ...ld,
     name: ld.name || oneLine($("h1.shopName").text()),
+    photos,
     source: "hotpepper",
     source_url: url,
     logo_url: logo,
@@ -248,6 +257,7 @@ function finalize(d: Partial<ShopDraft>): ShopDraft {
     review_count: d.review_count ?? null,
     reviews: d.reviews ?? [],
     menu: (d.menu ?? []).slice(0, MAX_MENU),
+    photos: [...new Set(d.photos ?? [])].slice(0, MAX_PHOTOS),
     source: d.source ?? "manual",
     source_url: d.source_url ?? null,
   };

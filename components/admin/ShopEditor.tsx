@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Eye, Plus, Trash2 } from "lucide-react";
-import { deleteShop, saveShop } from "@/app/admin/actions";
+import { ArrowDown, ArrowUp, Eye, ImagePlus, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { deleteShop, importShopAction, saveShop } from "@/app/admin/actions";
 import { dictionaries } from "@/lib/i18n";
 import type { MenuItem, Review, Shop, ShopDraft } from "@/lib/types";
 import ShopSheet from "../ShopSheet";
-import ImageInput from "./ImageInput";
+import ImageInput, { uploadImage } from "./ImageInput";
 import { Msg, useAction } from "./useAction";
 
 export const EMPTY_SHOP: ShopDraft = {
   name: "", genre: "", summary: "", logo_url: null, cover_url: null, budget: "", address: "", access: "",
-  hours: "", phone: "", lat: null, lng: null, rating: null, review_count: null, reviews: [], menu: [],
+  hours: "", phone: "", lat: null, lng: null, rating: null, review_count: null, reviews: [], menu: [], photos: [],
   source: "manual", source_url: null,
 };
 
@@ -28,9 +28,9 @@ export default function ShopEditor({
   compact?: boolean;
 }) {
   const router = useRouter();
-  const [d, setD] = useState<ShopDraft>(initial);
+  const [d, setD] = useState<ShopDraft>({ ...initial, photos: initial.photos ?? [] });
   const [preview, setPreview] = useState(false);
-  const { pending, msg, run } = useAction();
+  const { pending, msg, setMsg, run } = useAction();
   const set = <K extends keyof ShopDraft>(k: K, v: ShopDraft[K]) => setD((x) => ({ ...x, [k]: v }));
 
   const save = () =>
@@ -76,6 +76,7 @@ export default function ShopEditor({
         )}
       </div>
 
+      <PhotosEditor items={d.photos} onChange={(p) => set("photos", p)} onError={(e) => setMsg({ kind: "error", text: e })} />
       <MenuEditor items={d.menu} onChange={(m) => set("menu", m)} />
       <ReviewEditor items={d.reviews} onChange={(r) => set("reviews", r)} />
 
@@ -86,6 +87,32 @@ export default function ShopEditor({
         <button type="button" className="btn btn-ghost" onClick={() => setPreview(true)}>
           <Eye size={16} /> プレビュー
         </button>
+        {d.source_url && (d.source === "tabelog" || d.source === "hotpepper") && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={pending}
+            title="写真・評価・口コミ・メニューを掲載元の最新に更新（店名や概要の編集は残ります）"
+            onClick={() =>
+              run(() => importShopAction(d.source_url!), "掲載元から再取得しました（保存で確定）", (r) => {
+                if (!r.ok) return;
+                const fresh = (r.data as { draft: ShopDraft }).draft;
+                setD((x) => ({
+                  ...x,
+                  photos: fresh.photos,
+                  rating: fresh.rating,
+                  review_count: fresh.review_count,
+                  reviews: fresh.reviews,
+                  menu: fresh.menu,
+                  cover_url: x.cover_url || fresh.cover_url,
+                  logo_url: x.logo_url || fresh.logo_url,
+                }));
+              })
+            }
+          >
+            <RefreshCw size={16} /> 掲載元から再取得
+          </button>
+        )}
         <Msg msg={msg} />
         {id && !compact && (
           <button
@@ -125,6 +152,61 @@ function move<T>(list: T[], i: number, dir: -1 | 1) {
   const next = [...list];
   [next[i], next[j]] = [next[j], next[i]];
   return next;
+}
+
+function PhotosEditor({ items, onChange, onError }: { items: string[]; onChange: (p: string[]) => void; onError: (e: string) => void }) {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="eyebrow">Photos — 写真（{items.length}）</h3>
+        <label className="btn btn-ghost !min-h-8 cursor-pointer !px-3 text-xs">
+          <ImagePlus size={14} /> {busy ? "…" : "アップロード"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={async (e) => {
+              const files = [...(e.target.files ?? [])];
+              if (!files.length) return;
+              setBusy(true);
+              try {
+                const urls: string[] = [];
+                for (const f of files) urls.push(await uploadImage(f, "shops"));
+                onChange([...items, ...urls]);
+              } catch (x) {
+                onError((x as Error).message);
+              } finally {
+                setBusy(false);
+                e.target.value = "";
+              }
+            }}
+          />
+        </label>
+      </div>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {items.map((src, i) => (
+          <div key={src} className="group relative aspect-square overflow-hidden rounded-lg bg-paper-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            <div className="absolute inset-x-0 bottom-0 flex justify-between bg-ink/50 p-0.5 text-paper opacity-0 transition group-hover:opacity-100">
+              <button type="button" onClick={() => onChange(move(items, i, -1))} className="p-1" aria-label="left"><ArrowUp size={12} className="-rotate-90" /></button>
+              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="p-1" aria-label="remove"><X size={12} /></button>
+              <button type="button" onClick={() => onChange(move(items, i, 1))} className="p-1" aria-label="right"><ArrowDown size={12} className="-rotate-90" /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <input className="field !min-h-10 text-xs" placeholder="画像URLを追加" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <button type="button" className="btn btn-ghost !min-h-10 shrink-0 !px-3 text-xs" disabled={!url.trim()} onClick={() => { onChange([...items, url.trim()]); setUrl(""); }}>
+          <Plus size={14} /> 追加
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function MenuEditor({ items, onChange }: { items: MenuItem[]; onChange: (m: MenuItem[]) => void }) {
