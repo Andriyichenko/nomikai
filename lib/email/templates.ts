@@ -104,6 +104,8 @@ export function responseMail(p: {
   comment: string;
   deadline: string;
   updated: boolean;
+  /** signed link to the cancel confirmation page (works without login) */
+  cancelUrl?: string;
   site: string;
 }) {
   const subject = `【${p.updated ? "回答更新" : "回答受付"}】${p.event.title}`;
@@ -120,9 +122,13 @@ export function responseMail(p: {
       { label: "ひとこと", value: p.comment },
       { label: "締切", value: p.deadline },
     ],
-    buttons: [{ label: "回答を見る・変更する", href: p.event.url }],
+    buttons: [
+      { label: "回答を見る・変更する", href: p.event.url },
+      ...(p.cancelUrl ? [{ label: "回答を取り消す", href: p.cancelUrl, ghost: true }] : []),
+    ],
     tips: [
       "締切までは何度でも変更OK。迷ったら、とりあえず全部の日に◯を。",
+      "「回答を取り消す」はログインなしで使えます。送信・取り消しは1日10回まで。",
       "日程とお店が決まったら、またメールでお知らせします。",
     ],
     ps: "※ 回答するたびにこのメールが届きます。届かなくなったら、たぶん迷惑メールフォルダで寝ています。",
@@ -139,6 +145,7 @@ export function responseMail(p: {
     p.deadline && `締切: ${p.deadline}`,
     "",
     `回答の確認・変更: ${p.event.url}`,
+    p.cancelUrl && `回答を取り消す: ${p.cancelUrl}`,
   ]);
   return { subject, html, text };
 }
@@ -152,8 +159,12 @@ type Decided = {
   budget: string;
   note: string;
   icsUrl: string;
+  /** Google Calendar "add event" link; the .ics itself is attached to the mail */
+  gcalUrl: string;
   site: string;
 };
+
+const ICS_TIP = "iPhone などのカレンダーには、このメールに添付された予定（.ics）から追加できます。";
 
 const decidedRows = (p: Decided): Row[] => [
   { label: "日時", value: p.when },
@@ -174,10 +185,11 @@ export function decidedGoingMail(p: Decided) {
     note: p.note,
     buttons: [
       ...(p.shop?.mapUrl ? [{ label: "地図を開く", href: p.shop.mapUrl }] : []),
-      { label: "カレンダーに追加", href: p.icsUrl, ghost: true },
+      { label: "Googleカレンダーに追加", href: p.gcalUrl, ghost: true },
     ],
     tips: [
       "当日の朝に、もう一度メールでお知らせします。",
+      ICS_TIP,
       `都合が悪くなったら <a href="${esc(p.event.url)}" style="color:${C.accent};">会のページ</a> から「今回は見送る」へ。`,
     ],
     ps: "※ 遅刻の言い訳は、乾杯までに考えておいてください。",
@@ -195,7 +207,8 @@ export function decidedGoingMail(p: Decided) {
     p.note && `\n${p.note}`,
     "",
     p.shop?.mapUrl && `地図: ${p.shop.mapUrl}`,
-    `カレンダー: ${p.icsUrl}`,
+    `Googleカレンダー: ${p.gcalUrl}`,
+    `カレンダー（.ics）: ${p.icsUrl}`,
     `会のページ: ${p.event.url}`,
   ]);
   return { subject, html, text };
@@ -279,10 +292,11 @@ export function attendJoinMail(p: Decided) {
     rows: decidedRows(p),
     buttons: [
       ...(p.shop?.mapUrl ? [{ label: "地図を開く", href: p.shop.mapUrl }] : []),
-      { label: "カレンダーに追加", href: p.icsUrl, ghost: true },
+      { label: "Googleカレンダーに追加", href: p.gcalUrl, ghost: true },
     ],
     tips: [
       "当日の朝に、もう一度メールでお知らせします。",
+      ICS_TIP,
       `都合が悪くなったら <a href="${esc(p.event.url)}" style="color:${C.accent};">会のページ</a> から「今回は見送る」へ。`,
     ],
     zh: `【中文】已登记参加！当天早上会再发邮件提醒你。`,
@@ -298,7 +312,8 @@ export function attendJoinMail(p: Decided) {
     p.budget && `予算: ${p.budget}`,
     "",
     p.shop?.mapUrl && `地図: ${p.shop.mapUrl}`,
-    `カレンダー: ${p.icsUrl}`,
+    `Googleカレンダー: ${p.gcalUrl}`,
+    `カレンダー（.ics）: ${p.icsUrl}`,
     `会のページ: ${p.event.url}`,
   ]);
   return { subject, html, text };
@@ -327,6 +342,34 @@ export function attendCancelMail(p: Decided) {
     p.shop && `お店: ${p.shop.name}`,
     "",
     `もう一度参加する: ${p.event.url}`,
+  ]);
+  return { subject, html, text };
+}
+
+/** 1b) Someone withdrew their answer (event page or the link in the confirmation mail). */
+export function responseCancelMail(p: { brand: string; name: string; event: EventInfo; deadline: string; site: string }) {
+  const subject = `【回答取消】${p.event.title}`;
+  const html = layout({
+    brand: p.brand,
+    eyebrow: "Withdrawn",
+    title: "回答を取り消しました。<br>またいつでも、どうぞ。",
+    lead: `${esc(p.name)} さん、ご連絡ありがとうございます。<br>あなたの回答は集計から外れました。`,
+    rows: [
+      { label: "会", value: p.event.title },
+      { label: "締切", value: p.deadline },
+    ],
+    buttons: [{ label: "もう一度回答する", href: p.event.url }],
+    tips: ["締切までなら、会のページからもう一度回答できます。", "送信・取り消しは1日10回までです。"],
+    ps: "※ 心当たりがない場合は、幹事までお知らせください。",
+    zh: `【中文】已撤回你的回答。截止前可以在聚会页面重新回答。`,
+    footerUrl: p.site,
+  });
+  const text = plain([
+    `${p.name} さん`,
+    `「${p.event.title}」への回答を取り消しました。`,
+    p.deadline && `締切: ${p.deadline}`,
+    "",
+    `もう一度回答する: ${p.event.url}`,
   ]);
   return { subject, html, text };
 }

@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSettings, getViewer } from "@/lib/data";
 import { responseMail } from "@/lib/email/templates";
 import { sendMails } from "@/lib/mail";
-import { siteUrl } from "@/lib/links";
+import { siteUrl, withdrawLink } from "@/lib/links";
 import { deadlineLabel, shortDate } from "@/lib/format";
-import { notifyAttendance } from "@/lib/notify";
-import { ATTEND_LIMIT } from "@/lib/types";
+import { notifyAttendance, notifyResponseWithdrawn } from "@/lib/notify";
+import { ATTEND_LIMIT, RESPONSE_LIMIT } from "@/lib/types";
 
 const Input = z.object({
   eventId: z.string().uuid(),
@@ -20,6 +20,10 @@ const Input = z.object({
 });
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** The daily cap (responses_limit_changes trigger) comes back as an error code for the client. */
+const responseError = (e: { message: string; hint?: string | null }) =>
+  e.hint === RESPONSE_LIMIT || e.message.includes("response change limit") ? RESPONSE_LIMIT : e.message;
 
 export async function submitResponse(input: z.infer<typeof Input>): Promise<ActionResult> {
   const parsed = Input.safeParse(input);
@@ -42,7 +46,7 @@ export async function submitResponse(input: z.infer<typeof Input>): Promise<Acti
     dates,
     comment: comment.trim(),
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: responseError(error) };
   revalidatePath(`/e/${slug}`);
   revalidatePath("/");
 
@@ -59,6 +63,10 @@ export async function submitResponse(input: z.infer<typeof Input>): Promise<Acti
       if (!ev) return;
       const names = shopIds.map((id) => (shops ?? []).find((s) => s.id === id)?.name).filter(Boolean) as string[];
       const site = siteUrl();
+      let cancelUrl: string | undefined;
+      try {
+        cancelUrl = withdrawLink(site, slug, eventId, profile.id);
+      } catch {} // EMAIL_LINK_SECRET not set: mail goes out without the cancel button
       const mail = responseMail({
         brand: `${settings.brand} ${settings.brand_sub}`,
         name: profile.display_name,
@@ -68,6 +76,7 @@ export async function submitResponse(input: z.infer<typeof Input>): Promise<Acti
         comment: comment.trim(),
         deadline: ev.deadline ? deadlineLabel(ev.deadline) : "",
         updated: Boolean(before),
+        cancelUrl,
         site,
       });
       await sendMails([{ to: profile.email!, ...mail }]);
@@ -107,12 +116,16 @@ export async function withdrawResponse(eventId: string, slug: string): Promise<A
   const viewer = await getViewer();
   if (!viewer?.profile) return { ok: false, error: "ログインが必要です" };
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("responses")
     .delete()
     .eq("event_id", eventId)
-    .eq("profile_id", viewer.profile.id);
-  if (error) return { ok: false, error: error.message };
+    .eq("profile_id", viewer.profile.id)
+    .select("event_id");
+  if (error) return { ok: false, error: responseError(error) };
   revalidatePath(`/e/${slug}`);
+  revalidatePath("/");
+  // only when something was actually withdrawn (RLS silently deletes nothing after the deadline)
+  if (deleted?.length) await notifyResponseWithdrawn(eventId, viewer.profile.id);
   return { ok: true };
 }

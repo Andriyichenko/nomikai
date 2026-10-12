@@ -16,7 +16,14 @@ export const mailConfigured = configured;
 /** Sender name shown in the inbox; fixed so it doesn't change with the site title. */
 export const FROM_NAME = process.env.EMAIL_FROM_NAME || "バース人材-飲み会予約システム";
 
-export type Mail = { to: string; subject: string; html: string; text: string };
+export type Mail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  /** .ics attached to the mail: Gmail / iOS Mail offer "add to calendar" right in the app */
+  ics?: { filename: string; content: string };
+};
 
 /** Sends each mail individually (no shared recipient lists). Failures are logged, never thrown. */
 export async function sendMails(mails: Mail[]) {
@@ -24,7 +31,12 @@ export async function sendMails(mails: Mail[]) {
   let sent = 0;
   for (const m of mails) {
     try {
-      await transporter.sendMail({ from: { name: FROM_NAME, address: process.env.EMAIL_FROM! }, ...m });
+      const { ics, ...rest } = m;
+      await transporter.sendMail({
+        from: { name: FROM_NAME, address: process.env.EMAIL_FROM! },
+        ...rest,
+        ...(ics && { icalEvent: { method: "PUBLISH", filename: ics.filename, content: ics.content } }),
+      });
       sent++;
     } catch (e) {
       console.error("mail failed", m.to, e);

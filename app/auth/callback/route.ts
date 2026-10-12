@@ -20,7 +20,13 @@ export async function GET(request: Request) {
   const type = searchParams.get("type") as EmailOtpType | null;
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    // Sign-in links usually open in a new tab: /auth/done hands the session back to the tab the
+    // member asked from (LoginPanel) instead of leaving them on a second copy of the site.
+    // Password recovery has to continue in this tab (/reset-password).
+    if (!error)
+      return NextResponse.redirect(
+        type === "recovery" ? `${origin}${next}` : `${origin}/auth/done?next=${encodeURIComponent(next)}`,
+      );
   }
 
   const code = searchParams.get("code");

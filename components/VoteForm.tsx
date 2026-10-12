@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, Star } from "lucide-react";
+import { Check, Star, Undo2 } from "lucide-react";
 import { dictionaries, type Dict, type Lang } from "@/lib/i18n";
-import type { Response, Shop } from "@/lib/types";
+import { RESPONSE_LIMIT, type Response, type Shop } from "@/lib/types";
 import { submitResponse, withdrawResponse } from "@/app/e/[slug]/actions";
 import ShopSheet from "./ShopSheet";
 import ShopLogo from "./ShopLogo";
@@ -105,12 +105,13 @@ export default function VoteForm(props: Props) {
         setMessage({ kind: "ok", text: p.t.saved });
         router.refresh();
       } else {
-        setMessage({ kind: "error", text: res.error });
+        setMessage({ kind: "error", text: res.error === RESPONSE_LIMIT ? p.t.responseLimit : res.error });
       }
     });
   };
 
   const withdraw = () => {
+    if (!window.confirm(p.t.withdrawConfirm)) return;
     start(async () => {
       const res = await withdrawResponse(p.eventId, p.slug);
       if (res.ok) {
@@ -120,8 +121,9 @@ export default function VoteForm(props: Props) {
         try {
           localStorage.removeItem(draftKey);
         } catch {}
+        setMessage({ kind: "ok", text: p.t.attendBanner.withdrawn });
         router.refresh();
-      } else setMessage({ kind: "error", text: res.error });
+      } else setMessage({ kind: "error", text: res.error === RESPONSE_LIMIT ? p.t.responseLimit : res.error });
     });
   };
 
@@ -204,8 +206,13 @@ export default function VoteForm(props: Props) {
           className="field max-w-2xl"
         />
         {p.mine && p.isOpen && (
-          <button type="button" onClick={withdraw} disabled={pending} className="mt-4 block text-xs text-muted underline underline-offset-4 hover:text-accent">
-            {p.t.withdraw}
+          <button
+            type="button"
+            onClick={withdraw}
+            disabled={pending}
+            className="btn btn-ghost mt-6 !min-h-10 text-ink-2 hover:!border-accent hover:text-accent"
+          >
+            <Undo2 size={15} /> {p.t.withdraw}
           </button>
         )}
       </section>
@@ -253,7 +260,7 @@ export default function VoteForm(props: Props) {
         className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-card p-6 text-ink backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
       >
         <p className="mb-6 text-sm text-ink-2">{p.t.loginToSubmit}</p>
-        <LoginPanel t={p.tLogin} next={`/e/${p.slug}`} />
+        <LoginPanel t={p.tLogin} next={`/e/${p.slug}`} onSignedIn={() => loginRef.current?.close()} />
       </dialog>
     </div>
   );

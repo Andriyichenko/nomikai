@@ -201,7 +201,7 @@ export default function MascotDock({ lang, events, loggedIn }: { lang: Lang; eve
                       onClick={() => setLang(l)}
                       className={clsx("rounded-full px-2 py-1", lang === l ? "bg-ink text-paper" : "text-muted hover:text-ink")}
                     >
-                      {l === "ja" ? "JA" : "中"}
+                      {l === "ja" ? "日" : "中"}
                     </button>
                   ))}
                 </span>

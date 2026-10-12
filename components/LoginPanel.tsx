@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import type { Dict } from "@/lib/i18n";
+import { openAuthChannel } from "@/lib/auth-sync";
 
 type Mode = "login" | "signup" | "forgot";
 
@@ -12,8 +13,23 @@ type Mode = "login" | "signup" | "forgot";
  * Google OAuth, or email with the member's choice of password or a one-time mail link.
  * Sign-up asks for a display name (stored as `full_name`, which the DB trigger copies into
  * the profile); "forgot" sends a recovery link that lands on /reset-password.
+ *
+ * After a mail is sent this panel stays put and signs in by itself when the link is opened in
+ * another tab of the same browser (/auth/done → lib/auth-sync), or when the member types the
+ * one-time code from the mail — which also works when the link opened in a different browser.
  */
-export default function LoginPanel({ t, next = "/", initial = "login" }: { t: Dict["login"]; next?: string; initial?: "login" | "signup" }) {
+export default function LoginPanel({
+  t,
+  next = "/",
+  initial = "login",
+  onSignedIn,
+}: {
+  t: Dict["login"];
+  next?: string;
+  initial?: "login" | "signup";
+  /** called instead of navigating to `next` (e.g. the vote form's login dialog just closes) */
+  onSignedIn?: () => void;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initial);
   const [method, setMethod] = useState<"password" | "link">("password");
@@ -23,11 +39,64 @@ export default function LoginPanel({ t, next = "/", initial = "login" }: { t: Di
   const [confirm, setConfirm] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const finished = useRef(false);
 
   const callback = (to: string) => `${window.location.origin}/auth/callback?next=${encodeURIComponent(to)}`;
   const fail = (msg: string) => {
     setError(msg);
     setState("error");
+  };
+
+  const finish = useCallback(() => {
+    if (finished.current) return;
+    finished.current = true;
+    if (onSignedIn) onSignedIn();
+    else router.replace(next);
+    router.refresh();
+  }, [next, onSignedIn, router]);
+
+  // Waiting for the mail: hand-off from the tab that opened the link, or a session cookie that
+  // appeared meanwhile (checked when the member comes back to this tab, and every few seconds).
+  const waiting = state === "sent" && mode !== "forgot";
+  useEffect(() => {
+    if (!waiting) return;
+    const supabase = createClient();
+    const ch = openAuthChannel((m) => {
+      if (m.type !== "signed-in") return;
+      ch?.postMessage({ type: "ack" });
+      finish();
+    });
+    const check = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) finish();
+    };
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", check);
+    const iv = window.setInterval(check, 4000);
+    return () => {
+      ch?.close();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", check);
+      window.clearInterval(iv);
+    };
+  }, [waiting, finish]);
+
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = code.replace(/\D/g, "");
+    if (!token) return;
+    setVerifying(true);
+    setError("");
+    const supabase = createClient();
+    // "email" covers magic-link and new-user codes; password sign-ups confirm with "signup"
+    let { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "email" });
+    if (error && mode === "signup") ({ error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "signup" }));
+    setVerifying(false);
+    if (error) return setError(t.codeError);
+    finish();
   };
 
   const google = async () => {
@@ -178,7 +247,39 @@ export default function LoginPanel({ t, next = "/", initial = "login" }: { t: Di
       )}
 
       {state === "sent" ? (
-        <p className="rounded-xl border border-line bg-paper-2 p-4 text-sm leading-relaxed">{sentText}</p>
+        <div className="space-y-4">
+          <p className="rounded-xl border border-line bg-paper-2 p-4 text-sm leading-relaxed">{sentText}</p>
+          {waiting && (
+            <>
+              <p className="flex items-center gap-2 text-xs text-muted">
+                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
+                {t.waiting}
+              </p>
+              <form onSubmit={verifyCode} className="space-y-2">
+                <label htmlFor="login-code" className="label">
+                  {t.codeLabel}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="login-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9 ]*"
+                    maxLength={12}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className="field min-w-0 flex-1 text-center font-display text-xl tracking-[0.4em]"
+                    placeholder="000000"
+                  />
+                  <button type="submit" disabled={verifying || !code.trim()} className="btn btn-primary shrink-0">
+                    {verifying ? "…" : t.codeSubmit}
+                  </button>
+                </div>
+                {error && <p className="text-sm text-accent">{error}</p>}
+              </form>
+            </>
+          )}
+        </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           {usePassword && mode === "signup" && (

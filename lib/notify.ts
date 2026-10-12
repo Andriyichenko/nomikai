@@ -1,10 +1,11 @@
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 import { attendLink, siteUrl } from "./links";
-import { longDate, todayJST } from "./format";
+import { deadlineLabel, longDate, todayJST } from "./format";
 import { mapUrl } from "./shop-utils";
+import { buildIcs, googleCalendarUrl } from "./ics";
 import { getSettings } from "./data";
-import { attendCancelMail, attendJoinMail, decidedGoingMail, decidedInviteMail, dayOfMail } from "./email/templates";
+import { attendCancelMail, attendJoinMail, responseCancelMail, decidedGoingMail, decidedInviteMail, dayOfMail } from "./email/templates";
 import { sendMails, type Mail } from "./mail";
 import type { EventRow, Shop } from "./types";
 
@@ -28,9 +29,14 @@ async function context(eventId: string) {
     shop: s ? { name: s.name, address: s.address, mapUrl: mapUrl(s) } : null,
     budget: event.budget_note,
     icsUrl: `${site}/e/${event.slug}/ics`,
+    gcalUrl: event.decided_date ? googleCalendarUrl(event, s, `${site}/e/${event.slug}`) : "",
     site,
   };
-  return { db, event, shop: s, base };
+  // attached to "you're going" mails so the calendar can be filled without opening a browser
+  const ics = event.decided_date
+    ? { filename: `${event.slug}.ics`, content: buildIcs(event, s, `${site}/e/${event.slug}`) }
+    : undefined;
+  return { db, event, shop: s, base, ics };
 }
 
 /**
@@ -39,7 +45,7 @@ async function context(eventId: string) {
  * Re-deciding resets the attendee list (the date may have changed).
  */
 export async function notifyDecision(eventId: string, note: string, sendMail: boolean) {
-  const { db, event, base } = await context(eventId);
+  const { db, event, base, ics } = await context(eventId);
   if (!event.decided_date) throw new Error("not decided");
 
   const { data: rows } = await db
@@ -62,7 +68,7 @@ export async function notifyDecision(eventId: string, note: string, sendMail: bo
   const mails: Mail[] = [];
   for (const x of going) {
     if (!x.p.email) continue;
-    mails.push({ to: x.p.email, ...decidedGoingMail({ ...base, name: x.p.display_name, note }) });
+    mails.push({ to: x.p.email, ...decidedGoingMail({ ...base, name: x.p.display_name, note }), ics });
   }
   for (const x of others) {
     if (!x.p.email) continue;
@@ -93,13 +99,37 @@ export async function notifyAttendance(eventId: string, profileId: string, befor
   const kind = after === "going" && before !== "going" ? "join" : before === "going" && after === "declined" ? "cancel" : null;
   if (!kind) return;
   try {
-    const { db, base } = await context(eventId);
+    const { db, base, ics } = await context(eventId);
     const { data: p } = await db.from("profiles").select("email, display_name").eq("id", profileId).single();
     if (!p?.email) return;
     const mail = (kind === "join" ? attendJoinMail : attendCancelMail)({ ...base, name: p.display_name, note: "" });
-    await sendMails([{ to: p.email, ...mail }]);
+    await sendMails([{ to: p.email, ...mail, ...(kind === "join" && { ics }) }]);
   } catch (e) {
     console.error("attendance mail", e);
+  }
+}
+
+/** "回答を取り消しました" after a member withdraws their answer. Never throws. */
+export async function notifyResponseWithdrawn(eventId: string, profileId: string) {
+  try {
+    const db = createAdminClient();
+    const [{ data: ev }, { data: p }, settings] = await Promise.all([
+      db.from("events").select("title, slug, deadline").eq("id", eventId).single(),
+      db.from("profiles").select("email, display_name").eq("id", profileId).single(),
+      getSettings(),
+    ]);
+    if (!ev || !p?.email) return;
+    const site = siteUrl();
+    const mail = responseCancelMail({
+      brand: `${settings.brand} ${settings.brand_sub}`,
+      name: p.display_name,
+      event: { title: ev.title, url: `${site}/e/${ev.slug}` },
+      deadline: ev.deadline ? deadlineLabel(ev.deadline) : "",
+      site,
+    });
+    await sendMails([{ to: p.email, ...mail }]);
+  } catch (e) {
+    console.error("withdraw mail", e);
   }
 }
 

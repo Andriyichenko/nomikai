@@ -101,3 +101,6 @@ export type ArchiveEntry = {
 
 /** Error code from setAttendance when the daily join/decline cap (attendees_limit_changes trigger) is hit. */
 export const ATTEND_LIMIT = "attend_limit";
+
+/** Error code when the daily submit/withdraw cap (responses_limit_changes trigger) is hit. */
+export const RESPONSE_LIMIT = "response_limit";

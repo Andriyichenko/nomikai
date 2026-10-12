@@ -70,6 +70,8 @@ npm run typecheck && npm run lint && npm run build
 
 - Authentication → Sign In / Providers → **Email** が ON（パスワード登録とメールのリンク、どちらも使えます）。「Confirm email」も ON 推奨（登録時に確認メールが届きます）
 
+  ログインと登録のメールには確認コード（`{{ .Token }}`）も入っています。スマホでリンクが別のブラウザで開いてしまっても、元の画面にコードを入れればそのままログインできます。テンプレートを更新したら、この2つを貼り直してください。
+
   文面を変えたいときは `supabase/templates/_base.py` を編集して `python3 supabase/templates/_base.py` で2つを再生成します（デザインは共通）。
 
 **6. 最初の管理者** — 手順2を実行していれば、`ADMIN_EMAIL` のアドレスでログインするだけで「管理」メニューが出ます。

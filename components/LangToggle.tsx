@@ -22,7 +22,7 @@ export default function LangToggle({ lang }: { lang: Lang }) {
             aria-pressed={lang === l}
             className={lang === l ? "text-ink" : "text-muted hover:text-ink"}
           >
-            {l === "ja" ? "JA" : "中"}
+            {l === "ja" ? "日" : "中"}
           </button>
         </span>
       ))}

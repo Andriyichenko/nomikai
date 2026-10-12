@@ -1,7 +1,11 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-/** HMAC-signed one-click links for invitation mails ("参加する" / "今回は見送る"). */
+/**
+ * HMAC-signed links for mails, so they work without a login — mail apps on phones often open
+ * links in a different browser than the one the member signed in with.
+ * "参加する" / "今回は見送る" (invitations) and "回答を取り消す" (response confirmations).
+ */
 function sign(eventId: string, profileId: string, action: string) {
   const secret = process.env.EMAIL_LINK_SECRET;
   if (!secret) throw new Error("EMAIL_LINK_SECRET is not set");
@@ -11,6 +15,16 @@ function sign(eventId: string, profileId: string, action: string) {
 export function attendLink(site: string, slug: string, eventId: string, profileId: string, action: "yes" | "no") {
   const q = new URLSearchParams({ p: profileId, a: action, t: sign(eventId, profileId, action) });
   return `${site}/e/${slug}/attend?${q}`;
+}
+
+/** Opens a confirmation page (GET never deletes — mail scanners prefetch links). */
+export function withdrawLink(site: string, slug: string, eventId: string, profileId: string) {
+  const q = new URLSearchParams({ p: profileId, t: sign(eventId, profileId, "withdraw") });
+  return `${site}/e/${slug}/cancel?${q}`;
+}
+
+export function verifyWithdraw(eventId: string, profileId: string, token: string) {
+  return verifyAttend(eventId, profileId, "withdraw", token);
 }
 
 export function verifyAttend(eventId: string, profileId: string, action: string, token: string) {
